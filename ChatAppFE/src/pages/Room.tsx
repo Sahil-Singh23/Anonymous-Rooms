@@ -49,6 +49,7 @@ const Room = () => {
   const [removingTypingUsers,setRemovingTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeouts = useRef<Map<string,ReturnType<typeof setTimeout>>>(new Map());
   const [isConnecting, setIsConnecting] = useState(true);
+  const [isFirstRender, setIsFirstRender] = useState(true);
   const navigate = useNavigate();
 
   function saveSession() {
@@ -142,8 +143,22 @@ const Room = () => {
   }, [isReady]);
 
   useEffect(()=>{
-    msgsEndRef.current?.scrollIntoView({behavior:"smooth"})
+    if (isFirstRender) {
+      // Instant scroll for first load (no animation)
+      msgsEndRef.current?.scrollIntoView();
+    } else {
+      // Smooth scroll for subsequent messages
+      msgsEndRef.current?.scrollIntoView({behavior:"smooth"});
+    }
   },[typingUsers,msgs])
+
+  // Hide loader after first messages are rendered
+  useEffect(() => {
+    if (isFirstRender && msgs.length > 0) {
+      setIsFirstRender(false);
+      setIsConnecting(false);
+    }
+  }, [msgs, isFirstRender]);
   useEffect(()=>{
     try{
       const params = new URLSearchParams(window.location.search);
@@ -230,7 +245,6 @@ const Room = () => {
                 }
             }
             else if(data.type == "joined"){
-                setIsConnecting(false); 
                 const {userCount,msgs} = data.payload;
                 setUserCount(userCount);
                 // setShowAlert(true);
@@ -255,6 +269,7 @@ const Room = () => {
                     };
                 });
                 setMsgs((prev) => [...prev, ...transformedMsgs]);
+                // setIsConnecting will be handled by useEffect after messages render
                 saveSession();
             }
             else if(data.type == "user-joined"){
