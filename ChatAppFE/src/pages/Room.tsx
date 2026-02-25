@@ -534,9 +534,9 @@ const Room = () => {
       />
       <LoadingOverlay isLoading={isConnecting} />
       <Glow></Glow>
-      <div className="flex flex-col items-center justify-center min-h-screen px-3 sm:px-6 lg:px-8">
+      <div className="flex flex-col items-center justify-center min-h-screen px-1 sm:px-6 lg:px-8">
         <div className="w-full max-w-full md:max-w-1/2">
-          <div className="flex flex-col items-start p-6 md:p-8 rounded-2xl border border-solid border-neutral-700">
+          <div className="flex flex-col items-start p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700">
             <div className="flex items-center mb-3 gap-3 justify-between w-full">
               <div className="flex items-center gap-3">
                 <ChatIcon></ChatIcon>
@@ -554,12 +554,12 @@ const Room = () => {
             <span className="text-white text-[10px] md:text-sm mb-5 font-sfmono opacity-70">
               {"temporary chats that disappears after all users exit"}
             </span>
-            <div className="flex justify-between items-center bg-neutral-800 py-2 px-5 mb-3.25 rounded-2xl border-0 w-full h-12">
-              <span className="text-white/80 text-sm">
+            <div className="flex justify-between items-center bg-neutral-800 py-2 px-3 sm:px-5 mb-3.25 rounded-2xl border-0 w-full h-12">
+              <span className="text-white/80 text-xs sm:text-sm">
                 {`Room Code: ${roomCodeRef.current}`}
               </span>
-              <span className="flex gap-4 items-center text-white/80 text-sm">
-                <span className="text-white/80 text-sm">
+              <span className="flex gap-2 sm:gap-4 items-center text-white/80 text-xs sm:text-sm">
+                <span className="text-white/80 text-xs sm:text-sm">
                   {`Users ${userCount}`}
                 </span>
                 
@@ -583,7 +583,7 @@ const Room = () => {
               />
             </div>
             <div 
-            className="flex flex-col w-full h-[60svh] p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
+            className="flex flex-col w-full h-[55svh] sm:h-[60svh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
           >
               {msgs.map((m,i)=>(
                   <Message key={i} msg={m.msg} hours={m.hours} minutes={m.minutes} user={m.user} isSelf={m.isSelf} status={m.status}></Message>
@@ -593,7 +593,7 @@ const Room = () => {
               ))}
               <div ref={msgsEndRef}></div>
           </div>
-            <div className="flex flex-row mt-4 w-full gap-4 md:gap-2">
+            <div className="flex flex-row mt-4 w-full gap-2 md:gap-2">
               <Input 
                 width="w-5/6" 
                 ref={msgRef} 
