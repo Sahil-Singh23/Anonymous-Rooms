@@ -435,6 +435,9 @@ const Room = () => {
     const msg = msgRef.current.value;
     if (!msg.trim()) return;
     
+    // Store focus state to maintain it
+    const wasfocused = document.activeElement === msgRef.current;
+    
     // Get current time for optimistic message
     const now = Date.now();
     const date = new Date(now);
@@ -461,12 +464,12 @@ const Room = () => {
             sessionId: sessionId
         }
     }))
-    msgRef.current.value ="";
     
-    // Keep keyboard open by refocusing input immediately
-    setTimeout(() => {
-      msgRef.current?.focus();
-    }, 0);
+    // Clear input while maintaining focus (prevents keyboard flicker)
+    msgRef.current.value = "";
+    if (wasfocused && msgRef.current) {
+      msgRef.current.focus();
+    }
   }
 
   function leaveRoom() {
@@ -609,10 +612,6 @@ const Room = () => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
-                    // Ensure input stays focused on mobile after Enter
-                    setTimeout(() => {
-                      msgRef.current?.focus();
-                    }, 0);
                   }
                 }}
               ></Input>
