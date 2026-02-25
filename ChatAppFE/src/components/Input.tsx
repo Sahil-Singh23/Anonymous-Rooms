@@ -6,8 +6,13 @@ type inputProps = {
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void,
     onInput?: (e: React.FormEvent<HTMLInputElement>) => void,
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
+    onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void,
     value?: string,
-    disabled?: boolean
+    disabled?: boolean,
+    inputMode?: string,
+    autoComplete?: string,
+    autoCorrect?: string,
+    spellCheck?: boolean
 }
 
 
@@ -22,8 +27,13 @@ const Input = forwardRef<HTMLInputElement, inputProps>((props, ref) => {
         onKeyDown={props.onKeyDown}
         onInput={props.onInput}
         onChange={props.onChange}
+        onBlur={props.onBlur}
         value={props.value}
-        disabled = {props.disabled}
+        disabled={props.disabled}
+        inputMode={props.inputMode}
+        autoComplete={props.autoComplete}
+        autoCorrect={props.autoCorrect}
+        spellCheck={props.spellCheck}
       />
     </div>
   )

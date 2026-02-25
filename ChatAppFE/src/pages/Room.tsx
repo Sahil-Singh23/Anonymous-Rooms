@@ -435,9 +435,6 @@ const Room = () => {
     const msg = msgRef.current.value;
     if (!msg.trim()) return;
     
-    // Store focus state to maintain it
-    const wasfocused = document.activeElement === msgRef.current;
-    
     // Get current time for optimistic message
     const now = Date.now();
     const date = new Date(now);
@@ -465,13 +462,13 @@ const Room = () => {
         }
     }))
     
-    // Clear input while maintaining focus (prevents keyboard flicker)
+    // Clear input and maintain focus - mobile-optimized approach
     msgRef.current.value = "";
-    if (wasfocused && msgRef.current) {
-      // Use requestAnimationFrame for more reliable mobile focus
-      requestAnimationFrame(() => {
-        msgRef.current?.focus();
-      });
+    // Force focus using native DOM method for better mobile compatibility
+    if (msgRef.current) {
+      msgRef.current.focus();
+      // Ensure cursor is at the end
+      msgRef.current.setSelectionRange(0, 0);
     }
   }
 
@@ -611,6 +608,18 @@ const Room = () => {
                 placeholder="Type a message"
                 onInput={handleTyping}
                 disabled={isConnecting}
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                onBlur={(e) => {
+                  // Prevent blur on mobile after sending message
+                  setTimeout(() => {
+                    if (document.activeElement !== msgRef.current) {
+                      msgRef.current?.focus();
+                    }
+                  }, 10);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
