@@ -12,7 +12,37 @@ app.use(cors());
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
-const wss = new WebSocketServer({server});
+const wss = new WebSocketServer({
+    server,
+    verifyClient: (info: any) => {
+        const allowedOrigins = [
+            'https://apichatapp.duckdns.org',
+            'https://anonymous-room-websockets-one.vercel.app/', // Add your Vercel URL here
+            'http://localhost:5173', // Local development
+            /.*\.vercel\.app$/ // Allow any Vercel domain
+        ];
+        
+        const origin = info.origin;
+        console.log("WebSocket connection attempt from origin:", origin);
+        
+        // Check if origin is allowed
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (typeof allowed === 'string') {
+                return allowed === origin;
+            } else {
+                return allowed.test(origin);
+            }
+        });
+        
+        if (!isAllowed) {
+            console.log("❌ WebSocket connection rejected for origin:", origin);
+            return false;
+        }
+        
+        console.log("✅ WebSocket connection accepted for origin:", origin);
+        return true;
+    }
+});
 
 // Periodic cleanup: Delete empty rooms after 5-10 minutes
 const EMPTY_ROOM_TIMEOUT = 10 * 60 * 1000; 
@@ -86,9 +116,11 @@ app.post("/api/v1/room/:roomCode",(req,res)=>{
         return res.status(404).json({message:"Invalid room"})
 })
 
-wss.on("connection",(socket)=>{
+wss.on("connection",(socket, request)=>{
     //user enters here 
-    console.log("CLIENT CONNECTED");
+    console.log("CLIENT CONNECTED from:", request.headers.origin);
+    console.log("Headers:", request.headers);
+    
     socket.on("message",(e)=>{
         let data;
         console.log("MESSAGE RECEIVED:",e);
