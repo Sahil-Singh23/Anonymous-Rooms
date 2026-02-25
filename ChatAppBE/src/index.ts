@@ -13,40 +13,30 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 const wss = new WebSocketServer({
-    server,
-    verifyClient: (info: any) => {
+  noServer: true
+});
 
-    const origin = info.origin;
+// Handle WebSocket upgrade manually
+server.on("upgrade", (req, socket, head) => {
+  const origin = req.headers.origin as string | undefined;
 
-    console.log("WebSocket attempt from:", origin);
+  console.log("Upgrade attempt from:", origin);
 
-    // ✅ Allow clients WITHOUT origin (Postman / wscat)
-    if (!origin) {
-        console.log("✅ No origin → allowing connection");
-        return true;
-    }
+  const allowed =
+    !origin ||
+    origin === "https://apichatapp.duckdns.org" ||
+    origin && new URL(origin).hostname.endsWith(".vercel.app") ||
+    origin === "http://localhost:5173";
 
-    const allowedOrigins = [
-        'https://apichatapp.duckdns.org',
-        /.*\.vercel\.app$/,
-        'http://localhost:5173'
-    ];
+  if (!allowed) {
+    console.log("❌ Rejected origin:", origin);
+    socket.destroy();
+    return;
+  }
 
-    const isAllowed = allowedOrigins.some(allowed => {
-        if (typeof allowed === 'string') {
-            return allowed === origin;
-        }
-        return allowed.test(origin);
-    });
-
-    if (!isAllowed) {
-        console.log("❌ Rejected origin:", origin);
-        return false;
-    }
-
-    console.log("✅ Accepted origin:", origin);
-    return true;
-}
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
 });
 
 // Periodic cleanup: Delete empty rooms after 5-10 minutes
