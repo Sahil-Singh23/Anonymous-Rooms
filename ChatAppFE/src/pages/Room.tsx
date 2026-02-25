@@ -468,7 +468,10 @@ const Room = () => {
     // Clear input while maintaining focus (prevents keyboard flicker)
     msgRef.current.value = "";
     if (wasfocused && msgRef.current) {
-      msgRef.current.focus();
+      // Use requestAnimationFrame for more reliable mobile focus
+      requestAnimationFrame(() => {
+        msgRef.current?.focus();
+      });
     }
   }
 
