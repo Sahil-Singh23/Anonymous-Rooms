@@ -462,6 +462,11 @@ const Room = () => {
         }
     }))
     msgRef.current.value ="";
+    
+    // Keep keyboard open by refocusing input immediately
+    setTimeout(() => {
+      msgRef.current?.focus();
+    }, 0);
   }
 
   function leaveRoom() {
@@ -583,7 +588,7 @@ const Room = () => {
               />
             </div>
             <div 
-            className="flex flex-col w-full h-[55svh] sm:h-[60svh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
+            className="flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
           >
               {msgs.map((m,i)=>(
                   <Message key={i} msg={m.msg} hours={m.hours} minutes={m.minutes} user={m.user} isSelf={m.isSelf} status={m.status}></Message>
@@ -604,6 +609,10 @@ const Room = () => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
+                    // Ensure input stays focused on mobile after Enter
+                    setTimeout(() => {
+                      msgRef.current?.focus();
+                    }, 0);
                   }
                 }}
               ></Input>
