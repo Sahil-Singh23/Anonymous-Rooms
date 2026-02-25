@@ -15,33 +15,38 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 const wss = new WebSocketServer({
     server,
     verifyClient: (info: any) => {
-        const allowedOrigins = [
-            'https://apichatapp.duckdns.org',
-            'https://anonymous-room-websockets-one.vercel.app/', // Add your Vercel URL here
-            'http://localhost:5173', // Local development
-            /.*\.vercel\.app$/ // Allow any Vercel domain
-        ];
-        
-        const origin = info.origin;
-        console.log("WebSocket connection attempt from origin:", origin);
-        
-        // Check if origin is allowed
-        const isAllowed = allowedOrigins.some(allowed => {
-            if (typeof allowed === 'string') {
-                return allowed === origin;
-            } else {
-                return allowed.test(origin);
-            }
-        });
-        
-        if (!isAllowed) {
-            console.log("❌ WebSocket connection rejected for origin:", origin);
-            return false;
-        }
-        
-        console.log("✅ WebSocket connection accepted for origin:", origin);
+
+    const origin = info.origin;
+
+    console.log("WebSocket attempt from:", origin);
+
+    // ✅ Allow clients WITHOUT origin (Postman / wscat)
+    if (!origin) {
+        console.log("✅ No origin → allowing connection");
         return true;
     }
+
+    const allowedOrigins = [
+        'https://apichatapp.duckdns.org',
+        /.*\.vercel\.app$/,
+        'http://localhost:5173'
+    ];
+
+    const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') {
+            return allowed === origin;
+        }
+        return allowed.test(origin);
+    });
+
+    if (!isAllowed) {
+        console.log("❌ Rejected origin:", origin);
+        return false;
+    }
+
+    console.log("✅ Accepted origin:", origin);
+    return true;
+}
 });
 
 // Periodic cleanup: Delete empty rooms after 5-10 minutes
