@@ -88,11 +88,16 @@ app.post("/api/v1/room/:roomCode",(req,res)=>{
 
 wss.on("connection",(socket)=>{
     //user enters here 
+    console.log("CLIENT CONNECTED");
     socket.on("message",(e)=>{
         let data;
+        console.log("MESSAGE RECEIVED:",e);
         try{
             data = JSON.parse(e.toString());
+            console.log("PARSED:", data);
+            
         }catch(e){
+            console.error("JSON ERROR:", e);
             socket.send("Invalid request")
             return;
         }
@@ -278,6 +283,9 @@ wss.on("connection",(socket)=>{
         const timer = setTimeout(deleteUser,60*1000);
         clientData.disconnectTimeout = timer;
     })
+    socket.on("error", (err) => {
+    console.error("WS ERROR:", err);
+  });
 }) 
 
 

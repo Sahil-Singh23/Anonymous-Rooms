@@ -250,14 +250,13 @@ VITE_WS_URL=ws://localhost:8000
 
 ## 📦 Deployment
 
-### Backend (Railway)
+### Backend (Digital Ocean Droplet)
+> **Currently hosted on Digital Ocean VPS for production reliability**
 ```bash
-# Push to GitHub
-git push origin main
-
-# Railway → Import from GitHub
-# Set root directory: ChatAppBE
-# Deploy (auto-detects Node.js)
+# Backend is deployed on a Digital Ocean droplet
+# Running on Ubuntu 22.04 LTS with PM2 process manager
+# HTTPS/WSS enabled with SSL certificate
+# Automatic deployments via GitHub webhooks
 ```
 
 ### Frontend (Vercel)
