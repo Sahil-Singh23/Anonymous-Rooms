@@ -521,7 +521,7 @@ const Room = () => {
   }
 
   return (
-    <section className="min-h-screen bg-[#080605]">
+    <section className="min-h-screen bg-[#080605] pb-0 md:pb-auto">
       {showAlert && (
         <Alert 
           message={alertMessage}
@@ -542,7 +542,7 @@ const Room = () => {
       />
       <LoadingOverlay isLoading={isConnecting} />
       <Glow></Glow>
-      <div className="flex flex-col items-center justify-center min-h-screen px-1 sm:px-6 lg:px-8">
+      <div className="flex flex-col items-center justify-end md:justify-center min-h-screen px-1 sm:px-6 lg:px-8 pb-0 md:pb-auto">
         <div className="w-full max-w-full md:max-w-1/2">
           <div className="flex flex-col items-start p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700">
             <div className="flex items-center mb-3 gap-3 justify-between w-full">
