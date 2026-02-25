@@ -612,7 +612,7 @@ const Room = () => {
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                onBlur={(e) => {
+                onBlur={() => {
                   // Prevent blur on mobile after sending message
                   setTimeout(() => {
                     if (document.activeElement !== msgRef.current) {

@@ -9,7 +9,7 @@ type inputProps = {
     onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void,
     value?: string,
     disabled?: boolean,
-    inputMode?: string,
+    inputMode?: "search" | "text" | "email" | "tel" | "url" | "none" | "numeric" | "decimal",
     autoComplete?: string,
     autoCorrect?: string,
     spellCheck?: boolean
