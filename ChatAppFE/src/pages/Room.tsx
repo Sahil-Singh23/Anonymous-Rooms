@@ -152,6 +152,16 @@ const Room = () => {
     }
   },[typingUsers,msgs])
 
+  // Set first render to false after initial messages are loaded and scrolled
+  useEffect(() => {
+    if (isFirstRender && msgs.length > 0) {
+      // Use setTimeout to ensure scroll happens first
+      setTimeout(() => {
+        setIsFirstRender(false);
+      }, 100);
+    }
+  }, [msgs, isFirstRender]);
+
 
   useEffect(()=>{
     try{
@@ -265,7 +275,6 @@ const Room = () => {
                 setMsgs((prev) => [...prev, ...transformedMsgs]);
                 // Hide loader immediately on successful join
                 setIsConnecting(false);
-                setIsFirstRender(false);
                 saveSession();
             }
             else if(data.type == "user-joined"){
