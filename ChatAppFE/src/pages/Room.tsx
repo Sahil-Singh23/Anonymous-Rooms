@@ -152,13 +152,7 @@ const Room = () => {
     }
   },[typingUsers,msgs])
 
-  // Hide loader after first messages are rendered
-  useEffect(() => {
-    if (isFirstRender && msgs.length > 0) {
-      setIsFirstRender(false);
-      setIsConnecting(false);
-    }
-  }, [msgs, isFirstRender]);
+
   useEffect(()=>{
     try{
       const params = new URLSearchParams(window.location.search);
@@ -269,7 +263,9 @@ const Room = () => {
                     };
                 });
                 setMsgs((prev) => [...prev, ...transformedMsgs]);
-                // setIsConnecting will be handled by useEffect after messages render
+                // Hide loader immediately on successful join
+                setIsConnecting(false);
+                setIsFirstRender(false);
                 saveSession();
             }
             else if(data.type == "user-joined"){
