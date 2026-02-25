@@ -206,7 +206,7 @@ const Room = () => {
       nicknameRef.current = data.nickname;
       setIsReady(true);
    
-        ws.current = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:8000');
+        ws.current = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:8080');
        
         ws.current.onopen = ()=>{ 
             if(!ws.current) return;

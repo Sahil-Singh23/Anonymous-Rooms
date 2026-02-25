@@ -19,7 +19,7 @@ const Landing = () => {
   const [showModal, setShowModal] = useState(false);
   const [nickname, setNickname] = useState("");
   const navigate = useNavigate();
-  const fallBackUrl = 'http://localhost:8000';
+  const fallBackUrl = 'http://localhost:8080';
   
   const isNicknameFilled = nickname.trim().length > 0;
 

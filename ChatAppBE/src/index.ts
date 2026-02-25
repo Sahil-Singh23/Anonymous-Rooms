@@ -26,7 +26,8 @@ server.on("upgrade", (req, socket, head) => {
     !origin ||
     origin === "https://apichatapp.duckdns.org" ||
     origin && new URL(origin).hostname.endsWith(".vercel.app") ||
-    origin === "http://localhost:5173";
+    origin === "http://localhost:5173" ||
+    origin === "http://localhost:2005";
 
   if (!allowed) {
     console.log("❌ Rejected origin:", origin);
