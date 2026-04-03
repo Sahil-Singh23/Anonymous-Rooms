@@ -16,15 +16,24 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.5.0",
     "cors": "^2.8.5",
     "prettier": "^3.7.4",
+    "prisma": "^7.6.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/client": "^7.6.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.17",
     "@types/ws": "^8.18.1",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "ws": "^8.19.0"
   }
 }

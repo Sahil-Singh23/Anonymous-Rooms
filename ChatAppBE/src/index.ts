@@ -3,6 +3,10 @@ import { WebSocketServer,WebSocket } from "ws";
 import cors from 'cors';
 import random from "./utils.js";
 import * as dotenv from 'dotenv';
+
+import passport from "passport";
+import authRoutes from "./routes/auth.js";
+
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
 const app = express();
@@ -90,6 +94,10 @@ const rooms = new Map<string,RoomData>();
 // const rooms = new Map<string,Set<WebSocket>>();
 const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string}>();
 
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Health check endpoint for Railway
 app.get("/", (req,res)=>{
     res.json({status: "ok", message: "Chat server is running"})
@@ -111,6 +119,8 @@ app.post("/api/v1/room/:roomCode",(req,res)=>{
     else 
         return res.status(404).json({message:"Invalid room"})
 })
+
+app.use("/auth", authRoutes);
 
 wss.on("connection",(socket, request)=>{
     //user enters here 
