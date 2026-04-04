@@ -41,7 +41,7 @@ passport.use(new GoogleStrategy({
     }
 ));
 
-const normalizeEmail = (v) => (v || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+const normalizeEmail = (v:String) => (v || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
 
 router.post("/signup",async(req,res)=>{
     try{
@@ -77,7 +77,17 @@ router.post("/signup",async(req,res)=>{
 
         const token = jwt.sign({userId:user.id},JWT_SECRET,{ expiresIn: "30d" })
 
-        res.status(201).json({token,user:{id: user.id, name: user.name, email: user.email}});
+        res
+        .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // true in prod
+            sameSite: "lax", // or "strict" (depends on frontend)
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        })
+        .status(201)
+        .json({
+            user: { id: user.id, name: user.name, email: user.email }
+        });
     }catch(e:any){
         console.error("Signup error:", e);
         res.status(500).json({ error: e.message || "Signup failed" });
@@ -104,7 +114,12 @@ router.post("/login",async(req,res)=>{
 
         const token = jwt.sign({userId:user.id},JWT_SECRET,{ expiresIn: "30d" })
 
-        res.status(201).json({token,user:{id: user.id, name: user.name, email: user.email}});
+        res.cookie("token",token,{
+            httpOnly:true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 30 * 24 * 60 * 60 * 1000
+        }).status(201).json({user:{id: user.id, name: user.name, email: user.email}});
 
     }catch(e:any){
         console.error("SignIn error:", e);
@@ -112,5 +127,22 @@ router.post("/login",async(req,res)=>{
     }
 })
 
+router.post("/logout", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  res.status(200).json({ message: "Logged out successfully" });
+});
+
+router.get("/me",async(req,res)=>{
+    const token = req.cookies?.["token"] ;
+
+    if(!token) return res.status(401).json({message:"you are not logged in"});
+    
+
+    const user = await client.user.findUnique
+})
 
 export default router;
