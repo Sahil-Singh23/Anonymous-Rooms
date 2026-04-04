@@ -35,10 +35,6 @@ export default async function requireAuth(req:Request, res: Response, next: Next
 
         next();
     } catch (e) {
-        if (e.name === "TokenExpiredError") {
-            return res.status(401).json({ message: "Token expired" });
-        }
-
         return res.status(401).json({ message: "Invalid token" });
     }
 }

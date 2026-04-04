@@ -4,6 +4,7 @@ import { client } from "../prisma.js"
 import passport from "passport"
 import argon2 from "argon2";
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import requireAuth from "../middlewares/requireAuth.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET|| "secretKeyInDev";
@@ -43,7 +44,7 @@ passport.use(new GoogleStrategy({
 
 const normalizeEmail = (v:String) => (v || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
 
-router.post("/signup",async(req,res)=>{
+router.post("/signup",async(req,res)=>{n
     try{
         const { name, email, password } = req.body || {};
         const trimmedName = (name || "").trim();
@@ -69,7 +70,7 @@ router.post("/signup",async(req,res)=>{
 
         const user = await client.user.create({
             data:{
-                name,
+                name:trimmedName,
                 passwordHash: hashedPassword,
                 email: normalizedEmail
             }
@@ -136,13 +137,10 @@ router.post("/logout", (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-router.get("/me",async(req,res)=>{
-    const token = req.cookies?.["token"] ;
+router.get("/me",requireAuth, (req,res)=>{
+    const user = req.user;
 
-    if(!token) return res.status(401).json({message:"you are not logged in"});
-    
-
-    const user = await client.user.findUnique
+    return res.json(user);
 })
 
 export default router;
