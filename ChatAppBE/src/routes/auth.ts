@@ -7,6 +7,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import requireAuth from "../middlewares/requireAuth.js";
 
 const router = express.Router();
+
 const JWT_SECRET = process.env.JWT_SECRET|| "secretKeyInDev";
 
 passport.use(new GoogleStrategy({
@@ -44,7 +45,44 @@ passport.use(new GoogleStrategy({
 
 const normalizeEmail = (v:String) => (v || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
 
-router.post("/signup",async(req,res)=>{n
+router.get("/login/federated/google",passport.authenticate('google',{
+    scope: ['profile','email']
+}));
+
+router.get("/login/federated/google/callback",
+    passport.authenticate('google',{ session:false}),
+    async (req, res) => {
+    try {
+      const user = req.user as { id: number; email?: string; name?: string } | undefined;
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+      
+      // Generate JWT token
+      const token = jwt.sign({userId: user.id}, JWT_SECRET, { expiresIn: "30d" });
+
+      res.cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 30 * 24 * 60 * 60 * 1000
+      });
+
+      // Also include token in URL fragment for cross-origin OAuth flow
+      // Fragment is not sent to server, so it's safer from logging/headers
+      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendURL}/auth/callback?token=${token}&userId=${user.id}`);
+    } catch (error) {
+
+      console.error('OAuth callback error:', error);
+      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendURL}/auth/callback?message=${encodeURIComponent('Authentication failed')}`);
+    }
+  }
+);
+
+router.post("/signup",async(req,res)=>{
     try{
         const { name, email, password } = req.body || {};
         const trimmedName = (name || "").trim();
@@ -120,7 +158,7 @@ router.post("/login",async(req,res)=>{
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             maxAge: 30 * 24 * 60 * 60 * 1000
-        }).status(201).json({user:{id: user.id, name: user.name, email: user.email}});
+        }).status(200).json({user:{id: user.id, name: user.name, email: user.email}});
 
     }catch(e:any){
         console.error("SignIn error:", e);
