@@ -1,12 +1,13 @@
 import express from "express";
 import { WebSocketServer,WebSocket } from "ws";
 import cors from 'cors';
-import random from "./utils.js";
+import random from "./utils/random.js";
 import * as dotenv from 'dotenv';
 
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
+import uploadRoutes from "./routes/uploads.js"
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
@@ -100,10 +101,14 @@ const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check endpoint for Railway
+// Health check endpoint 
 app.get("/", (req,res)=>{
     res.json({status: "ok", message: "Chat server is running"})
 })
+
+app.use("/auth", authRoutes);
+app.use("/uplods",uploadRoutes)
+
 app.post("/api/v1/create", (req,res)=>{
     const roomCode = random(6);
     rooms.set(roomCode,{
@@ -121,8 +126,6 @@ app.post("/api/v1/room/:roomCode",(req,res)=>{
     else 
         return res.status(404).json({message:"Invalid room"})
 })
-
-app.use("/auth", authRoutes);
 
 wss.on("connection",(socket, request)=>{
     //user enters here 

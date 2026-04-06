@@ -12,7 +12,7 @@ datasource db {
   provider = "postgresql"
 }
 
-model User{
+model User {
   id              Int       @id @default(autoincrement())
   name            String
   email           String    @unique
@@ -20,4 +20,22 @@ model User{
   googleId        String?   @unique
   createdAt       DateTime  @default(now())
   updatedAt       DateTime   @updatedAt
+  
+  files           File[]
+}
+
+model File {
+  id              Int       @id @default(autoincrement())
+  filename        String
+  fileType        String
+  fileSize        Int
+  s3Key           String    @unique
+  s3Url           String
+  userId          Int?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime  // File auto-deletes from S3 at this time
+  createdAt       DateTime  @default(now())
+  
+  @@index([expiresAt])
+  @@index([userId])
 }
