@@ -9,6 +9,10 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import uploadRoutes from "./routes/uploads.js"
 
+import s3cleanup from "./utils/s3cleanup.js";
+
+
+
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
 const app = express();
@@ -69,6 +73,16 @@ setInterval(() => {
     console.log(`Deleted empty room: ${roomCode}`);
   }
 }, CLEANUP_INTERVAL);
+
+
+//cleanup job every 1 hour 
+async function startCleanup() {
+  while (true) {
+    await s3cleanup();
+    await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
+  }
+}
+startCleanup();
 
 interface Message{
     msg: string,

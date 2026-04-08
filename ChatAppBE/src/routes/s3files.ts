@@ -8,7 +8,7 @@ function validateFileType(filetype: string){
     return true; //write allowed file types
 }
 
-router.get("/upload",requireAuth,async (req,res)=>{
+router.post("/upload",requireAuth,async (req,res)=>{
     const {filename,filetype,filesize,roomCode} = req.body; 
 
     if(!filename || !filetype || !filesize || !roomCode)  return res.status(401).json({message:"Invalid payload"});
@@ -16,12 +16,16 @@ router.get("/upload",requireAuth,async (req,res)=>{
     if(!validateFileType(filetype)) return res.status(401).json({message:"Invalid file type"});
 
     const s3key = `uploads/${Date.now()}-${filename}`
-    const expiresIn = 60*60*24;
+    const expiresIn = 60*15;
 
     const putUrl = await getPutObjectURL(s3key,filetype,expiresIn);
     
-
+    return res.status(200).json({url:putUrl});
 })
+
+router
+
+
 
 
 
