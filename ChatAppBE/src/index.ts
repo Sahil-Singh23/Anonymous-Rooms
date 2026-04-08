@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
-import uploadRoutes from "./routes/uploads.js"
+import fileRoutes from "./routes/s3files.js"
 
 import s3cleanup from "./utils/s3cleanup.js";
 
@@ -121,7 +121,7 @@ app.get("/", (req,res)=>{
 })
 
 app.use("/auth", authRoutes);
-app.use("/uplods",uploadRoutes)
+app.use("/files",fileRoutes)
 
 app.post("/api/v1/create", (req,res)=>{
     const roomCode = random(6);
