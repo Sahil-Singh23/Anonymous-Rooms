@@ -5,18 +5,39 @@ import { client } from "../prisma";
 
 const router = express.Router();
 
-function validateFileType(filetype: string){
-    return true; //write allowed file types
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || "25") * 1024 * 1024;  // Default 25MB
+
+const ALLOWED_FILE_TYPES = [
+  // Images
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  // Documents
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  // Spreadsheets
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  // Text
+  'text/plain',
+  // Video
+  'video/mp4',
+  'video/webm',
+];
+
+function validateFileType(filetype: string): boolean {
+  return ALLOWED_FILE_TYPES.includes(filetype);
 }
 
 router.post("/upload",async (req,res)=>{
     const {filename,filetype,filesize,roomCode} = req.body; 
 
-    if(!filename || !filetype || !filesize || !roomCode)  return res.status(401).json({message:"Invalid payload"});
+    if(!filename || !filetype || !filesize || !roomCode)  return res.status(400).json({message:"Invalid payload"});
 
-    //write the correct unit for filesize
-    if(filesize>'2048mb') return res.status(401).json({message:"File Size is too large"});
-    if(!validateFileType(filetype)) return res.status(401).json({message:"Invalid file type"});
+    if(filesize > MAX_FILE_SIZE) return res.status(400).json({error:"File size exceeds maximum limit"});
+    if(!validateFileType(filetype)) return res.status(400).json({error:"File type not allowed"});
 
     const s3key = `uploads/${Date.now()}-${filename}`
     const expiresIn = 60*15;
@@ -27,37 +48,63 @@ router.post("/upload",async (req,res)=>{
 })
 
 router.post("/confirm",async(req,res)=>{
-    const {key,filename,filetype,filesize} = req.body;
-    if(!key || filename || !filetype || !filesize)  return res.status(401).json({message:"Invalid payload"});
+    try {
+        const {key,filename,filetype,filesize} = req.body;
+        if(!key || !filename || !filetype || !filesize) return res.status(400).json({error:"Invalid payload"});
 
-    const expire = new Date(Date.now()+24*60*60*1000);
-    await client.file.create({
-        data:{
-            filename,
-            fileType:filetype,   
-            fileSize:filesize,
-            s3Key: key,
-            s3Url: "",
-            expiresAt: expire
-        }
-    })
+        const userId = (req as any).user?.id || null;
+        const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+        const file = await client.file.create({
+            data: {
+                filename,
+                fileType: filetype,
+                fileSize: filesize,
+                s3Key: key,
+                s3Url: s3Url,
+                userId: userId,
+                expiresAt: expiresAt
+            }
+        });
 
+        return res.status(201).json({
+            fileId: file.id,
+            s3Key: file.s3Key,
+            s3Url: file.s3Url
+        });
+    } catch (error) {
+        console.error("Confirm error:", error);
+        return res.status(500).json({error: "Failed to confirm file upload"});
+    }
 })
 
 router.get("/get/:key",async(req,res)=>{
-    const key = req.params.key;
+    try {
+        const key = req.params.key;
 
-    const file = await client.file.findUnique({where:{
-        s3Key: key
-    }})
+        const file = await client.file.findUnique({
+            where: { s3Key: key }
+        });
 
-    if(!file) return res.json(401).json({message:"invalid file"});
-    if(file.expiresAt<= new Date()) res.json(401).json({message:"expired file"});
+        if(!file) return res.status(404).json({error:"File not found"});
+        if(file.expiresAt <= new Date()) return res.status(410).json({error:"File has expired"});
 
-    const url = await getObjectURL(file.s3Key);
+        const url = await getObjectURL(file.s3Key);
 
-    return res.status(200).json({url})
+        return res.status(200).json({
+            id: file.id,
+            filename: file.filename,
+            fileType: file.fileType,
+            fileSize: file.fileSize,
+            presignedGetUrl: url,
+            expiresIn: 3600,
+            createdAt: file.createdAt
+        });
+    } catch (error) {
+        console.error("Get file error:", error);
+        return res.status(500).json({error: "Failed to get file"});
+    }
 })
 
 
