@@ -32,7 +32,7 @@ model File {
   s3Key           String    @unique
   s3Url           String
   userId          Int?
-  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   expiresAt       DateTime  // File auto-deletes from S3 at this time
   createdAt       DateTime  @default(now())
   

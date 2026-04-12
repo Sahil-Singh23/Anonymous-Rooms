@@ -9,7 +9,7 @@ function validateFileType(filetype: string){
     return true; //write allowed file types
 }
 
-router.post("/upload",requireAuth,async (req,res)=>{
+router.post("/upload",async (req,res)=>{
     const {filename,filetype,filesize,roomCode} = req.body; 
 
     if(!filename || !filetype || !filesize || !roomCode)  return res.status(401).json({message:"Invalid payload"});
@@ -26,7 +26,7 @@ router.post("/upload",requireAuth,async (req,res)=>{
     return res.status(200).json({url:putUrl});
 })
 
-router.post("/confirm",requireAuth,async(req,res)=>{
+router.post("/confirm",async(req,res)=>{
     const {key,filename,filetype,filesize} = req.body;
     if(!key || filename || !filetype || !filesize)  return res.status(401).json({message:"Invalid payload"});
 
@@ -45,7 +45,7 @@ router.post("/confirm",requireAuth,async(req,res)=>{
 
 })
 
-router.get("/get/:key",requireAuth,async(req,res)=>{
+router.get("/get/:key",async(req,res)=>{
     const key = req.params.key;
 
     const file = await client.file.findUnique({where:{
