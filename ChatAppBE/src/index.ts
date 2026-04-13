@@ -16,7 +16,7 @@ dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
 const app = express();
 app.use(express.json());
-app.use(cors({origin:["https://anonymous-room-websockets-one.vercel.app","http://localhost:5173"],credentials: true}));
+app.use(cors({origin:["https://anonymous-room-websockets-one.vercel.app","http://localhost:2005"],credentials: true}));
 app.use(cookieParser());
 
 const server = app.listen(PORT, '0.0.0.0', () => {
@@ -105,7 +105,6 @@ const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string
 
 // Initialize Passport
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Health check endpoint 
 app.get("/", (req,res)=>{

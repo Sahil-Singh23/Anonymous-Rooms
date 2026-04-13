@@ -38,11 +38,6 @@ export async function uploadFileToS3(
       throw new Error('No file selected');
     }
 
-    const MAX_SIZE = 25 * 1024 * 1024; // 25MB
-    if (file.size > MAX_SIZE) {
-      throw new Error(`File size exceeds 25MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-    }
-
     const ALLOWED_TYPES = [
       'image/jpeg',
       'image/png',
@@ -60,6 +55,11 @@ export async function uploadFileToS3(
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new Error(`File type not allowed: ${file.type}`);
+    }
+
+    const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+    if (file.size > MAX_SIZE) {
+      throw new Error(`File size exceeds 25MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
     }
 
     // Step 1: Get presigned PUT URL from backend

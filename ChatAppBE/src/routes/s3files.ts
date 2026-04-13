@@ -1,8 +1,8 @@
 import express from "express"
 import { v4 as uuidv4 } from "uuid";
-import requireAuth from "../middlewares/requireAuth";
-import { getObjectURL, getPutObjectURL, deleteObjectFromS3 } from "../utils/s3";
-import { client } from "../prisma";
+//import requireAuth from "../middlewares/requireAuth";
+import { getObjectURL, getPutObjectURL, deleteObjectFromS3 } from "../utils/s3.js";
+import { client } from "../prisma.js";
 
 const router = express.Router();
 

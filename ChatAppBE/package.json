@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsc -b && node ./dist/index.js",
-    "build": "tsc",
+    "dev": "tsc -b && node fix-imports.js && node ./dist/index.js",
+    "build": "tsc && node fix-imports.js",
     "start": "node ./dist/index.js"
   },
   "keywords": [],
