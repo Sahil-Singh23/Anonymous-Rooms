@@ -1,4 +1,4 @@
-import { Download, File as FileIcon } from 'lucide-react';
+import { Download} from 'lucide-react';
 
 interface FileMessageProps {
   fileName: string;

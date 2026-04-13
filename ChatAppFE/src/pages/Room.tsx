@@ -11,6 +11,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { useParams, useNavigate } from 'react-router-dom'
 import LoadingOverlay from "../components/LoadingOverlay"
 import ShareLinkModal from "../components/ShareLinkModal"
+import FileInput from "../components/FileInput"
+import FileMessage from "../components/FileMessage"
+import UploadProgress from "../components/UploadProgress"
+import { completeFileUpload } from "../services/fileUploadService"
 
 interface StoredSession{
   roomCode: string ,
@@ -19,15 +23,34 @@ interface StoredSession{
   timestamp : number
 }
 
+interface ChatMessage {
+  user: string;
+  msg?: string;
+  hours: number;
+  minutes: number;
+  isSelf: boolean;
+  status?: 'sending' | 'sent';
+  timestamp: number;
+  fileId?: number;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+}
+
 const Room = () => {
   const { roomCode: paramRoomCode } = useParams<{ roomCode?: string }>();
-  const [msgs,setMsgs] = useState<{user:string,msg:string,hours:number,minutes:number,isSelf:boolean,status?:'sending'|'sent',timestamp:number}[]>([])
+  const [msgs, setMsgs] = useState<ChatMessage[]>([])
   const msgRef = useRef<HTMLInputElement | null>(null);
   const ws = useRef<WebSocket|null>(null);
   const msgsEndRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const nicknameRef = useRef('');
   const roomCodeRef = useRef('');
+  const [isFileUploading, setIsFileUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadFileSize, setUploadFileSize] = useState(0);
   const [sessionId] = useState(() => {
     const stored = localStorage.getItem('chatSession');
       if (stored) {
@@ -264,12 +287,19 @@ const Room = () => {
                     const date = new Date(m.time);
                     return {
                         user: m.user,
-                        msg: m.msg,
+                        ...(m.msg && { msg: m.msg }),
                         hours: date.getHours(),
                         minutes: date.getMinutes(),
                         isSelf: m.sessionId === sessionId,
                         status: m.sessionId === sessionId ? ('sent' as const) : undefined,
-                        timestamp: m.time
+                        timestamp: m.time,
+                        ...(m.fileId && { 
+                            fileId: m.fileId,
+                            fileUrl: m.fileUrl,
+                            fileName: m.fileName,
+                            fileType: m.fileType,
+                            fileSize: m.fileSize
+                        })
                     };
                 });
                 setMsgs((prev) => [...prev, ...transformedMsgs]);
@@ -292,14 +322,19 @@ const Room = () => {
                 setAlertType('info');
             }
             else if(data.type == 'message'){
-                const {time,msg,user,sessionId:msgSessionId} = data.payload;
+                const {time, msg, user, sessionId:msgSessionId, fileId, fileUrl, fileName, fileType, fileSize} = data.payload;
 
                 //store the message recieved on local storage as well
                 const backendMsg = {
                     msg,
                     user,
                     time,
-                    sessionId: msgSessionId
+                    sessionId: msgSessionId,
+                    fileId,
+                    fileUrl,
+                    fileName,
+                    fileType,
+                    fileSize
                 };
                 const currentMsgs = getLocalMsgs();
                 const updatedMsgs = [...currentMsgs, backendMsg];
@@ -315,24 +350,51 @@ const Room = () => {
                 if (isSelf) {
                   // Update existing 'sending' message to 'sent'
                   setMsgs((prevMsgs) => {
-                    const foundIndex = prevMsgs.findIndex(
-                      (m) => m.isSelf && m.msg === msg && m.status === 'sending' && (time - m.timestamp < 10000)
-                    );
-                    if (foundIndex !== -1) {
-                      const updated = [...prevMsgs];
-                      updated[foundIndex] = {
-                        ...updated[foundIndex],
-                        status: 'sent' as const,
-                        timestamp: time
-                      };
-                      return updated;
+                    // For file messages, match by fileId
+                    if (fileId) {
+                      const foundIndex = prevMsgs.findIndex(
+                        (m) => m.isSelf && m.fileId === fileId && m.status === 'sending' && (time - m.timestamp < 10000)
+                      );
+                      if (foundIndex !== -1) {
+                        const updated = [...prevMsgs];
+                        updated[foundIndex] = {
+                          ...updated[foundIndex],
+                          status: 'sent' as const,
+                          timestamp: time
+                        };
+                        return updated;
+                      }
+                    } else if (msg) {
+                      // For text messages, match by content
+                      const foundIndex = prevMsgs.findIndex(
+                        (m) => m.isSelf && m.msg === msg && m.status === 'sending' && (time - m.timestamp < 10000)
+                      );
+                      if (foundIndex !== -1) {
+                        const updated = [...prevMsgs];
+                        updated[foundIndex] = {
+                          ...updated[foundIndex],
+                          status: 'sent' as const,
+                          timestamp: time
+                        };
+                        return updated;
+                      }
+                      // Fallback: add as sent if optimistic not found
+                      return [...prevMsgs, {user, msg, hours, minutes, isSelf, status:'sent' as const, timestamp:time}];
                     }
-                    // Fallback: add as sent if optimistic not found
-                    return [...prevMsgs, {user,msg,hours,minutes,isSelf,status:'sent' as const,timestamp:time}];
+                    return prevMsgs;
                   });
                 } else {
                   // Other user's message
-                  setMsgs((m)=>[...m,{user,msg,hours,minutes,isSelf,timestamp:time}]);
+                  const newMsg: ChatMessage = {
+                    user,
+                    ...(msg && { msg }),
+                    hours,
+                    minutes,
+                    isSelf,
+                    timestamp: time,
+                    ...(fileId && { fileId, fileUrl, fileName, fileType, fileSize })
+                  };
+                  setMsgs((m) => [...m, newMsg]);
                 }
                 
                 // Remove typing indicator when user sends a message
@@ -472,6 +534,85 @@ const Room = () => {
     }
   }
 
+  async function handleFileSelect(file: File) {
+    try {
+      setIsFileUploading(true);
+      setUploadFileName(file.name);
+      setUploadFileSize(file.size);
+      setUploadProgress(0);
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + Math.random() * 30;
+        });
+      }, 300);
+
+      // Upload file
+      const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      // Broadcast file message via WebSocket
+      const now = Date.now();
+      const date = new Date(now);
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+
+      // Add optimistic file message
+      const optimisticFileMsg: ChatMessage = {
+        user: nicknameRef.current,
+        hours,
+        minutes,
+        isSelf: true,
+        status: 'sending',
+        timestamp: now,
+        fileId: fileMetadata.fileId,
+        fileUrl: fileMetadata.s3Url,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      };
+      setMsgs((prev) => [...prev, optimisticFileMsg]);
+
+      // Send to server
+      ws.current?.send(JSON.stringify({
+        type: 'message',
+        payload: {
+          msg: '',
+          fileId: fileMetadata.fileId,
+          fileUrl: fileMetadata.s3Url,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          sessionId: sessionId
+        }
+      }));
+
+      // Reset after short delay
+      setTimeout(() => {
+        setIsFileUploading(false);
+        setUploadProgress(0);
+        setUploadFileName('');
+        setUploadFileSize(0);
+      }, 500);
+    } catch (error) {
+      console.error('❌ File upload failed:', error);
+      setShowAlert(true);
+      setAlertMessage(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAlertType('error');
+      setIsFileUploading(false);
+      setUploadProgress(0);
+      setUploadFileName('');
+      setUploadFileSize(0);
+    }
+  }
+
   function leaveRoom() {
     ws.current?.close();
     localStorage.removeItem('roomMessages');
@@ -593,8 +734,28 @@ const Room = () => {
             <div 
             className="flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
           >
-              {msgs.map((m,i)=>(
-                  <Message key={i} msg={m.msg} hours={m.hours} minutes={m.minutes} user={m.user} isSelf={m.isSelf} status={m.status}></Message>
+              {msgs.map((m, i) => (
+                m.fileUrl && m.fileName ? (
+                  <FileMessage
+                    key={i}
+                    fileName={m.fileName}
+                    fileSize={m.fileSize || 0}
+                    fileType={m.fileType || 'file'}
+                    fileUrl={m.fileUrl}
+                    isSelf={m.isSelf}
+                    timestamp={m.timestamp}
+                  />
+                ) : (
+                  <Message 
+                    key={i} 
+                    msg={m.msg || ''} 
+                    hours={m.hours} 
+                    minutes={m.minutes} 
+                    user={m.user} 
+                    isSelf={m.isSelf} 
+                    status={m.status}
+                  />
+                )
               ))}
               {Array.from(typingUsers.values()).map((typingUser) => (
                   <TypingBubble key={typingUser.user} user={typingUser.user} isRemoving={removingTypingUsers.has(typingUser.user)} />
@@ -607,7 +768,7 @@ const Room = () => {
                 ref={msgRef} 
                 placeholder="Type a message"
                 onInput={handleTyping}
-                disabled={isConnecting}
+                disabled={isConnecting || isFileUploading}
                 inputMode="text"
                 autoComplete="off"
                 autoCorrect="off"
@@ -627,12 +788,23 @@ const Room = () => {
                   }
                 }}
               ></Input>
+              <FileInput
+                onFileSelect={handleFileSelect}
+                isLoading={isFileUploading}
+              />
               <span className="hidden md:block w-1/6">
               <Button width="w-full" onClick={sendMessage} text={"Send"} ></Button></span>
               <span className="block md:hidden w-1/6">
                 <Button width="w-full" onClick={sendMessage} icon={<SendIcon></SendIcon>} ></Button>
               </span>
             </div>
+            {isFileUploading && (
+              <UploadProgress
+                progress={uploadProgress}
+                fileName={uploadFileName}
+                fileSize={uploadFileSize}
+              />
+            )}
           </div>
         </div>
       </div>
