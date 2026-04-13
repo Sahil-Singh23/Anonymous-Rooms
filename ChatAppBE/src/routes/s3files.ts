@@ -1,6 +1,7 @@
 import express from "express"
+import { v4 as uuidv4 } from "uuid";
 import requireAuth from "../middlewares/requireAuth";
-import { getObjectURL, getPutObjectURL } from "../utils/s3";
+import { getObjectURL, getPutObjectURL, deleteObjectFromS3 } from "../utils/s3";
 import { client } from "../prisma";
 
 const router = express.Router();
@@ -39,12 +40,21 @@ router.post("/upload",async (req,res)=>{
     if(filesize > MAX_FILE_SIZE) return res.status(400).json({error:"File size exceeds maximum limit"});
     if(!validateFileType(filetype)) return res.status(400).json({error:"File type not allowed"});
 
-    const s3key = `uploads/${Date.now()}-${filename}`
-    const expiresIn = 60*15;
+    const s3key = `uploads/${uuidv4()}-${filename}`;
+    const expiresIn = 60 * 15;
 
-    const putUrl = await getPutObjectURL(s3key,filetype,expiresIn);
-    
-    return res.status(200).json({url:putUrl});
+    try {
+        const putUrl = await getPutObjectURL(s3key, filetype, expiresIn);
+        
+        return res.status(200).json({
+            s3Key: s3key,
+            presignedPutUrl: putUrl,
+            expiresIn: expiresIn
+        });
+    } catch (error) {
+        console.error("Upload error:", error);
+        return res.status(500).json({error: "Failed to generate upload URL"});
+    }
 })
 
 router.post("/confirm",async(req,res)=>{
@@ -105,9 +115,40 @@ router.get("/get/:key",async(req,res)=>{
         console.error("Get file error:", error);
         return res.status(500).json({error: "Failed to get file"});
     }
-})
+});
 
+router.delete("/delete/:fileId", async (req, res) => {
+    try {
+        const fileId = parseInt(req.params.fileId);
+        const userId = (req as any).user?.id || null;
 
+        const file = await client.file.findUnique({
+            where: { id: fileId }
+        });
 
+        if (!file) return res.status(404).json({error: "File not found"});
+
+        // Only allow deletion if user owns the file or is admin
+        if (file.userId && userId !== file.userId) {
+            return res.status(403).json({error: "You don't have permission to delete this file"});
+        }
+
+        // Delete from S3
+        await deleteObjectFromS3(file.s3Key);
+
+        // Delete from DB
+        await client.file.delete({
+            where: { id: fileId }
+        });
+
+        return res.status(200).json({
+            message: "File deleted successfully",
+            fileId: fileId
+        });
+    } catch (error) {
+        console.error("Delete file error:", error);
+        return res.status(500).json({error: "Failed to delete file"});
+    }
+});
 
 export default router;

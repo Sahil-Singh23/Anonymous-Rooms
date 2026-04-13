@@ -8,8 +8,7 @@ import passport from "passport";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import fileRoutes from "./routes/s3files.js"
-
-import s3cleanup from "./utils/s3cleanup.js";
+import { startFileCleanupJob } from "./jobs/fileCleanup.js";
 
 
 
@@ -74,15 +73,8 @@ setInterval(() => {
   }
 }, CLEANUP_INTERVAL);
 
-
-//cleanup job every 1 hour 
-async function startCleanup() {
-  while (true) {
-    await s3cleanup();
-    await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
-  }
-}
-startCleanup();
+// Start file cleanup job - deletes expired files from S3 every hour
+startFileCleanupJob();
 
 interface Message{
     msg: string,
