@@ -13,7 +13,6 @@ import LoadingOverlay from "../components/LoadingOverlay"
 import ShareLinkModal from "../components/ShareLinkModal"
 import FileInput from "../components/FileInput"
 import FileMessage from "../components/FileMessage"
-import UploadProgress from "../components/UploadProgress"
 import { completeFileUpload } from "../services/fileUploadService"
 
 interface StoredSession{
@@ -49,9 +48,6 @@ const Room = () => {
   const nicknameRef = useRef('');
   const roomCodeRef = useRef('');
   const [isFileUploading, setIsFileUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadFileName, setUploadFileName] = useState('');
-  const [uploadFileSize, setUploadFileSize] = useState(0);
   const [sessionId] = useState(() => {
     const stored = localStorage.getItem('chatSession');
       if (stored) {
@@ -541,35 +537,12 @@ const Room = () => {
 
   async function handleFileSelect(file: File) {
     try {
-      setIsFileUploading(true);
-      setUploadFileName(file.name);
-      setUploadFileSize(file.size);
-      setUploadProgress(0);
-
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + Math.random() * 30;
-        });
-      }, 300);
-
-      // Upload file
-      const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      // Broadcast file message via WebSocket
+      // Create optimistic message immediately with status='sending'
       const now = Date.now();
       const date = new Date(now);
       const hours = date.getHours();
       const minutes = date.getMinutes();
 
-      // Add optimistic file message
       const optimisticFileMsg: ChatMessage = {
         user: nicknameRef.current,
         hours,
@@ -577,14 +550,35 @@ const Room = () => {
         isSelf: true,
         status: 'sending',
         timestamp: now,
-        fileId: fileMetadata.fileId,
-        s3Key: fileMetadata.s3Key,
-        s3Url: fileMetadata.s3Url,
+        fileId: `temp-${now}`,
+        s3Key: `temp-${now}`,
+        s3Url: '',
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size
       };
+      
+      // Add to chat immediately so user sees it
       setMsgs((prev) => [...prev, optimisticFileMsg]);
+      setIsFileUploading(true);
+
+      // Upload file
+      const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
+
+      // Update message with real metadata
+      setMsgs((prev) =>
+        prev.map((m) =>
+          m.timestamp === now
+            ? {
+                ...m,
+                status: 'sent',
+                fileId: fileMetadata.fileId,
+                s3Key: fileMetadata.s3Key,
+                s3Url: fileMetadata.s3Url,
+              }
+            : m
+        )
+      );
 
       // Send to server
       ws.current?.send(JSON.stringify({
@@ -601,22 +595,13 @@ const Room = () => {
         }
       }));
 
-      // Reset after short delay
-      setTimeout(() => {
-        setIsFileUploading(false);
-        setUploadProgress(0);
-        setUploadFileName('');
-        setUploadFileSize(0);
-      }, 500);
+      setIsFileUploading(false);
     } catch (error) {
       console.error('❌ File upload failed:', error);
       setShowAlert(true);
       setAlertMessage(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setAlertType('error');
       setIsFileUploading(false);
-      setUploadProgress(0);
-      setUploadFileName('');
-      setUploadFileSize(0);
     }
   }
 
@@ -794,6 +779,7 @@ const Room = () => {
                     s3Url={m.s3Url}
                     isSelf={m.isSelf}
                     timestamp={m.timestamp}
+                    status={m.status as 'sending' | 'sent' | 'failed' | undefined}
                   />
                 ) : (
                   <Message 
@@ -861,13 +847,6 @@ const Room = () => {
                 <Button width="w-full" onClick={sendMessage} icon={<SendIcon></SendIcon>} ></Button>
               </span>
             </div>
-            {isFileUploading && (
-              <UploadProgress
-                progress={uploadProgress}
-                fileName={uploadFileName}
-                fileSize={uploadFileSize}
-              />
-            )}
           </div>
         </div>
       </div>

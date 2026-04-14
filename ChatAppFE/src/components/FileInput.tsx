@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface FileInputProps {
   onFileSelect: (file: File) => void;
@@ -10,7 +10,6 @@ interface FileInputProps {
 
 export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = false }: FileInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
 
@@ -45,11 +44,14 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
-      setSelectedFile(null);
       return;
     }
     setError('');
-    setSelectedFile(file);
+    // Directly send the file without showing a confirmation modal
+    onFileSelect(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,105 +82,13 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
     }
   };
 
-  const handleUpload = () => {
-    if (selectedFile) {
-      onFileSelect(selectedFile);
-      setSelectedFile(null);
-      setError('');
-    }
-  };
-
   const handleCancel = () => {
-    setSelectedFile(null);
     setError('');
     onCancel?.();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
-      return '🖼️';
-    }
-    if (file.type === 'application/pdf') {
-      return '📄';
-    }
-    if (file.type.includes('word') || file.type.includes('document')) {
-      return '📝';
-    }
-    if (file.type.includes('sheet') || file.type.includes('excel')) {
-      return '📊';
-    }
-    if (file.type.startsWith('video/')) {
-      return '🎥';
-    }
-    if (file.type === 'text/plain') {
-      return '📃';
-    }
-    return '📎';
-  };
-
-  // If file is selected, show preview
-  if (selectedFile) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-sm w-full p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Send file?</h2>
-            <button
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* File Preview */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">{getFileIcon(selectedFile)}</div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 wrap-break-wor">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  Send
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // File input with drag-drop
   return (
