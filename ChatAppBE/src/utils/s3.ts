@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID || "";
@@ -17,6 +17,44 @@ const s3client = new S3Client({
     secretAccessKey: secretAccessKey,
   },
 });
+
+/**
+ * Configure CORS on S3 bucket to allow browser uploads
+ */
+async function configureCORS(): Promise<void> {
+  try {
+    const corsCommand = new PutBucketCorsCommand({
+      Bucket: bucketName,
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedHeaders: ["*"],
+            AllowedMethods: ["GET", "PUT", "POST", "DELETE", "HEAD"],
+            AllowedOrigins: [
+              "http://localhost:2005",
+              "http://localhost:5173",
+              "http://localhost:3000",
+              "http://localhost:8080",
+              "https://localhost:2005",
+              "https://localhost:5173",
+              "https://localhost:3000",
+            ],
+            ExposeHeaders: ["ETag", "x-amz-version-id"],
+            MaxAgeSeconds: 3000,
+          },
+        ],
+      },
+    });
+    await s3client.send(corsCommand);
+    console.log("✅ S3 CORS configured successfully");
+  } catch (error) {
+    console.warn("⚠️  Failed to configure S3 CORS:", error);
+    // Don't throw - this might fail if bucket already has CORS or insufficient permissions
+  }
+}
+
+// Configure CORS on startup
+configureCORS();
 
 /**
  * Get presigned GET URL (for downloading/viewing files)

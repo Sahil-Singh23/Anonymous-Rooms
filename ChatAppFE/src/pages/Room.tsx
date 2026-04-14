@@ -32,7 +32,7 @@ interface ChatMessage {
   status?: 'sending' | 'sent';
   timestamp: number;
   fileId?: number;
-  fileUrl?: string;
+  s3Key?: string;
   fileName?: string;
   fileType?: string;
   fileSize?: number;
@@ -322,7 +322,7 @@ const Room = () => {
                 setAlertType('info');
             }
             else if(data.type == 'message'){
-                const {time, msg, user, sessionId:msgSessionId, fileId, fileUrl, fileName, fileType, fileSize} = data.payload;
+                const {time, msg, user, sessionId:msgSessionId, fileId, s3Key, fileName, fileType, fileSize} = data.payload;
 
                 //store the message recieved on local storage as well
                 const backendMsg = {
@@ -331,7 +331,7 @@ const Room = () => {
                     time,
                     sessionId: msgSessionId,
                     fileId,
-                    fileUrl,
+                    s3Key,
                     fileName,
                     fileType,
                     fileSize
@@ -392,7 +392,7 @@ const Room = () => {
                     minutes,
                     isSelf,
                     timestamp: time,
-                    ...(fileId && { fileId, fileUrl, fileName, fileType, fileSize })
+                    ...(fileId && { fileId, s3Key, fileName, fileType, fileSize })
                   };
                   setMsgs((m) => [...m, newMsg]);
                 }
@@ -573,7 +573,7 @@ const Room = () => {
         status: 'sending',
         timestamp: now,
         fileId: fileMetadata.fileId,
-        fileUrl: fileMetadata.s3Url,
+        s3Key: fileMetadata.s3Key,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size
@@ -586,7 +586,7 @@ const Room = () => {
         payload: {
           msg: '',
           fileId: fileMetadata.fileId,
-          fileUrl: fileMetadata.s3Url,
+          s3Key: fileMetadata.s3Key,
           fileName: file.name,
           fileType: file.type,
           fileSize: file.size,
@@ -735,13 +735,13 @@ const Room = () => {
             className="flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
           >
               {msgs.map((m, i) => (
-                m.fileUrl && m.fileName ? (
+                m.s3Key && m.fileName ? (
                   <FileMessage
                     key={i}
                     fileName={m.fileName}
                     fileSize={m.fileSize || 0}
                     fileType={m.fileType || 'file'}
-                    fileUrl={m.fileUrl}
+                    s3Key={m.s3Key}
                     isSelf={m.isSelf}
                     timestamp={m.timestamp}
                   />

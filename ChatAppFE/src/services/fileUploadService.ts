@@ -78,12 +78,19 @@ export async function uploadFileToS3(
     // Step 2: Upload file directly to S3 using presigned URL
     console.log('Uploading file to S3...', s3Key);
 
-    //put req to aws s3 presigned url
-    await axios.put(presignedPutUrl, file, {
+    // Use fetch instead of axios for S3 presigned URL
+    // Axios adds headers that break the presigned signature
+    const uploadResponse = await fetch(presignedPutUrl, {
+      method: 'PUT',
+      body: file,
       headers: {
         'Content-Type': file.type,
       },
     });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`S3 upload failed with status ${uploadResponse.status}: ${uploadResponse.statusText}`);
+    }
 
     console.log('File uploaded to S3 successfully');
     return s3Key;
