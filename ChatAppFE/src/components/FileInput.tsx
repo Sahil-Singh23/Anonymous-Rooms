@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 interface FileInputProps {
   onFileSelect: (file: File) => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  merged?: boolean;
 }
 
-export const FileInput = ({ onFileSelect, onCancel, isLoading = false }: FileInputProps) => {
+export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = false }: FileInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
@@ -168,7 +169,7 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false }: FileInp
                 </>
               ) : (
                 <>
-                  <Upload size={16} />
+                  <Plus size={16} />
                   Send
                 </>
               )}
@@ -196,21 +197,14 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false }: FileInp
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`transition-colors ${
-          dragActive ? 'bg-blue-100' : ''
-        }`}
       >
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isLoading}
-          className={`p-2.5 rounded-full transition-colors ${
-            dragActive
-              ? 'bg-blue-100 text-blue-600'
-              : 'hover:bg-gray-100 text-gray-600 disabled:opacity-50'
-          }`}
+          className={`${merged ? 'p-3 text-white hover:text-[#beb59b] transition-colors disabled:opacity-50' : 'p-3 rounded-xl border border-solid border-[#444444] text-white hover:border-[#beb59b] transition-colors disabled:opacity-50'}`}
           title="Attach file"
         >
-          <Upload size={20} />
+          <Plus size={20} />
         </button>
       </div>
 

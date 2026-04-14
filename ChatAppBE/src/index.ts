@@ -81,6 +81,12 @@ interface Message{
     user: string,
     time:number,
     sessionId: string,
+    fileId?: number,
+    s3Key?: string,
+    s3Url?: string,
+    fileName?: string,
+    fileType?: string,
+    fileSize?: number
 }
 interface RoomData{
     messageHistory: Message[],
@@ -245,24 +251,31 @@ wss.on("connection",(socket, request)=>{
                 }));
                 return;
             }
-            const {msg} = data.payload || {};
-            if (!msg || typeof msg !== "string") {
+            const {msg, fileId, s3Key, s3Url, fileName, fileType, fileSize} = data.payload || {};
+            
+            // Validate: either msg is present or file metadata is present
+            const hasMessage = msg && typeof msg === "string";
+            const hasFileData = fileId && s3Key && fileName;
+            
+            if (!hasMessage && !hasFileData) {
                 socket.send(JSON.stringify({
                     type: "error",
-                    payload: { message: "Invalid message" }
+                    payload: { message: "Invalid message: must have text or file data" }
                 }));
                 return;
             }
+            
             const {user,roomCode,sessionId} = client
             const roomData = rooms.get(roomCode);
             if(!roomData) return ; 
             const time = Date.now();
 
-            const msgObj : Message ={
-                msg:msg,
+            const msgObj : Message = {
+                msg: msg || '',
                 user,
                 time,
-                sessionId
+                sessionId,
+                ...(hasFileData && { fileId, s3Key, s3Url, fileName, fileType, fileSize })
             }
             roomData.messageHistory.push(msgObj);
             if(roomData.messageHistory.length > 100) {

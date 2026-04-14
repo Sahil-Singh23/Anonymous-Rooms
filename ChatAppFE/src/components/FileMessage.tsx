@@ -1,12 +1,13 @@
-import { Download} from 'lucide-react';
-import { useState } from 'react';
-import { getFileDownloadUrl } from '../services/fileUploadService';
+import { Download, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getFileDownloadUrl, getFileViewUrl } from '../services/fileUploadService';
 
 interface FileMessageProps {
   fileName: string;
   fileSize: number;
   fileType: string;
   s3Key: string;
+  s3Url?: string;
   isSelf: boolean;
   timestamp: number;
 }
@@ -16,10 +17,36 @@ export const FileMessage = ({
   fileSize,
   fileType,
   s3Key,
+  s3Url,
   isSelf,
   timestamp,
 }: FileMessageProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [viewUrl, setViewUrl] = useState<string>('');
+  const [loadingPreview, setLoadingPreview] = useState(true);
+  const [previewError, setPreviewError] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const isImage = fileType.startsWith('image/');
+  const isVideo = fileType.startsWith('video/');
+  const isPreviewable = isImage || isVideo;
+
+  // Fetch presigned URL for viewing images/videos
+  useEffect(() => {
+    if (isPreviewable) {
+      getFileViewUrl(s3Key)
+        .then(url => {
+          setViewUrl(url);
+          setLoadingPreview(false);
+        })
+        .catch(err => {
+          console.error('Failed to get preview URL:', err);
+          setPreviewError(true);
+          setLoadingPreview(false);
+        });
+    }
+  }, [s3Key, isPreviewable]);
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -41,7 +68,6 @@ export const FileMessage = ({
       setIsDownloading(true);
       const presignedUrl = await getFileDownloadUrl(s3Key);
       
-      // Create a temporary anchor element and trigger download
       const link = document.createElement('a');
       link.href = presignedUrl;
       link.download = fileName;
@@ -78,31 +104,123 @@ export const FileMessage = ({
     return '📎';
   };
 
+  // Image preview
+  if (isImage) {
+    return (
+      <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-2`}>
+        <div className={`relative w-56 h-56 rounded-lg overflow-hidden border border-neutral-700 bg-neutral-800`}>
+          {loadingPreview ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-neutral-400 text-sm">Loading...</span>
+            </div>
+          ) : previewError || !viewUrl ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-neutral-400 text-sm">❌ Preview unavailable</span>
+            </div>
+          ) : (
+            <img
+              src={viewUrl}
+              alt={fileName}
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => window.open(viewUrl, '_blank')}
+            />
+          )}
+          
+          {/* Download button - top left */}
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-50 transition-all"
+            title="Download"
+          >
+            <Download size={16} className="text-white" />
+          </button>
+          
+          {/* Time and status - bottom left */}
+          <div className="absolute bottom-2 left-2 text-white text-xs font-semibold">
+            {formatTime(timestamp)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Video preview
+  if (isVideo) {
+    return (
+      <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-2`}>
+        <div className={`relative w-64 h-56 rounded-lg overflow-hidden border border-neutral-700 bg-neutral-800`}>
+          {loadingPreview ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-neutral-400 text-sm">Loading...</span>
+            </div>
+          ) : previewError || !viewUrl ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-neutral-400 text-sm">❌ Preview unavailable</span>
+            </div>
+          ) : (
+            <video
+              src={viewUrl}
+              controls
+              className="w-full h-full object-cover bg-black"
+            />
+          )}
+          
+          {/* Download button - top left */}
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-50 transition-all z-10"
+            title="Download"
+          >
+            <Download size={16} className="text-white" />
+          </button>
+          
+          {/* Time - bottom left */}
+          <div className="absolute bottom-2 left-2 text-white text-xs font-semibold z-10">
+            {formatTime(timestamp)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // File card (for PDFs, docs, etc.)
   return (
     <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} mb-2`}>
-      <button
-        onClick={handleDownload}
-        disabled={isDownloading}
-        className={`max-w-xs px-4 py-3 rounded-lg transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-          isSelf
-            ? 'bg-blue-500 text-white rounded-b-none'
-            : 'bg-gray-200 text-gray-900 rounded-b-none'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div className="text-2xl">{getFileIcon(fileType)}</div>
+      <div className={`relative w-72 px-4 py-3 rounded-lg border border-neutral-700 ${
+        isSelf ? 'bg-neutral-900' : 'bg-neutral-800'
+      }`}>
+        <div className="flex items-start gap-3 pb-2">
+          {/* File Icon */}
+          <div className="text-3xl flex-shrink-0 mt-1">{getFileIcon(fileType)}</div>
+          
+          {/* File Info - Center */}
           <div className="flex-1 min-w-0">
-            <p className="font-medium break-words text-sm">{fileName}</p>
-            <p className={`text-xs ${isSelf ? 'text-blue-100' : 'text-gray-600'}`}>
+            <p className="font-semibold text-sm break-words text-white">
+              {fileName}
+            </p>
+            <p className="text-xs mt-0.5 text-neutral-400">
               {formatFileSize(fileSize)}
             </p>
           </div>
-          <Download size={16} className="flex-shrink-0" />
+          
+          {/* Download Button - Right */}
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex-shrink-0 p-2 rounded-full transition-all disabled:opacity-50 hover:bg-neutral-700"
+            title="Download"
+          >
+            <Download size={18} className="text-white" />
+          </button>
         </div>
-        <div className={`text-xs mt-1 ${isSelf ? 'text-blue-100' : 'text-gray-500'}`}>
+        
+        {/* Time - Bottom Right */}
+        <div className="text-xs text-right text-neutral-400">
           {isDownloading ? 'Downloading...' : formatTime(timestamp)}
         </div>
-      </button>
+      </div>
     </div>
   );
 };

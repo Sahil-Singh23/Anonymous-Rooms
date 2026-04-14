@@ -165,6 +165,27 @@ export async function getFileDownloadUrl(s3Key: string): Promise<string> {
 }
 
 /**
+ * Get presigned view URL for a file (12 hour expiry for viewing)
+ * Used for displaying images and videos in chat
+ */
+export async function getFileViewUrl(s3Key: string): Promise<string> {
+  try {
+    const response = await axios.get<{ presignedUrl: string; expiresIn: number }>(
+      `${API_BASE_URL}/files/view/${encodeURIComponent(s3Key)}`
+    );
+    return response.data.presignedUrl;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Get view URL failed:', error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.error || error.message || 'Failed to get view URL'
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * Complete file upload flow in one function
  * Returns file metadata needed for WebSocket broadcast
  */

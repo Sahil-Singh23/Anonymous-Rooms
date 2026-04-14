@@ -92,6 +92,7 @@ router.post("/confirm",async(req,res)=>{
 router.get("/get/:key",async(req,res)=>{
     try {
         const key = req.params.key;
+        const expiresIn = parseInt(req.query.expiresIn as string) || 3600; // Default 1 hour
 
         const file = await client.file.findUnique({
             where: { s3Key: key }
@@ -100,7 +101,7 @@ router.get("/get/:key",async(req,res)=>{
         if(!file) return res.status(404).json({error:"File not found"});
         if(file.expiresAt <= new Date()) return res.status(410).json({error:"File has expired"});
 
-        const url = await getObjectURL(file.s3Key);
+        const url = await getObjectURL(file.s3Key, expiresIn);
 
         return res.status(200).json({
             id: file.id,
@@ -108,12 +109,36 @@ router.get("/get/:key",async(req,res)=>{
             fileType: file.fileType,
             fileSize: file.fileSize,
             presignedGetUrl: url,
-            expiresIn: 3600,
+            expiresIn: expiresIn,
             createdAt: file.createdAt
         });
     } catch (error) {
         console.error("Get file error:", error);
         return res.status(500).json({error: "Failed to get file"});
+    }
+});
+
+router.get("/view/:key", async (req, res) => {
+    try {
+        const key = req.params.key;
+        const twelveHours = 12 * 60 * 60; // 12 hours in seconds
+
+        const file = await client.file.findUnique({
+            where: { s3Key: key }
+        });
+
+        if(!file) return res.status(404).json({error:"File not found"});
+        if(file.expiresAt <= new Date()) return res.status(410).json({error:"File has expired"});
+
+        const url = await getObjectURL(file.s3Key, twelveHours);
+
+        return res.status(200).json({
+            presignedUrl: url,
+            expiresIn: twelveHours
+        });
+    } catch (error) {
+        console.error("View file error:", error);
+        return res.status(500).json({error: "Failed to get view URL"});
     }
 });
 

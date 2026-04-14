@@ -33,6 +33,7 @@ interface ChatMessage {
   timestamp: number;
   fileId?: number;
   s3Key?: string;
+  s3Url?: string;
   fileName?: string;
   fileType?: string;
   fileSize?: number;
@@ -73,6 +74,8 @@ const Room = () => {
   const typingTimeouts = useRef<Map<string,ReturnType<typeof setTimeout>>>(new Map());
   const [isConnecting, setIsConnecting] = useState(true);
   const [isFirstRender, setIsFirstRender] = useState(true);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounter = useRef(0);
   const navigate = useNavigate();
 
   function saveSession() {
@@ -295,7 +298,8 @@ const Room = () => {
                         timestamp: m.time,
                         ...(m.fileId && { 
                             fileId: m.fileId,
-                            fileUrl: m.fileUrl,
+                            s3Key: m.s3Key,
+                            s3Url: m.s3Url,
                             fileName: m.fileName,
                             fileType: m.fileType,
                             fileSize: m.fileSize
@@ -322,7 +326,7 @@ const Room = () => {
                 setAlertType('info');
             }
             else if(data.type == 'message'){
-                const {time, msg, user, sessionId:msgSessionId, fileId, s3Key, fileName, fileType, fileSize} = data.payload;
+                const {time, msg, user, sessionId:msgSessionId, fileId, s3Key, s3Url, fileName, fileType, fileSize} = data.payload;
 
                 //store the message recieved on local storage as well
                 const backendMsg = {
@@ -332,6 +336,7 @@ const Room = () => {
                     sessionId: msgSessionId,
                     fileId,
                     s3Key,
+                    s3Url,
                     fileName,
                     fileType,
                     fileSize
@@ -392,7 +397,7 @@ const Room = () => {
                     minutes,
                     isSelf,
                     timestamp: time,
-                    ...(fileId && { fileId, s3Key, fileName, fileType, fileSize })
+                    ...(fileId && { fileId, s3Key, s3Url, fileName, fileType, fileSize })
                   };
                   setMsgs((m) => [...m, newMsg]);
                 }
@@ -574,6 +579,7 @@ const Room = () => {
         timestamp: now,
         fileId: fileMetadata.fileId,
         s3Key: fileMetadata.s3Key,
+        s3Url: fileMetadata.s3Url,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size
@@ -587,6 +593,7 @@ const Room = () => {
           msg: '',
           fileId: fileMetadata.fileId,
           s3Key: fileMetadata.s3Key,
+          s3Url: fileMetadata.s3Url,
           fileName: file.name,
           fileType: file.type,
           fileSize: file.size,
@@ -635,6 +642,42 @@ const Room = () => {
     } else {
       // No share API, show modal
       setShowShareModal(true);
+    }
+  }
+
+  function handleDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDraggingOver(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingOver(false);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDraggingOver(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      handleFileSelect(file);
     }
   }
 
@@ -732,7 +775,13 @@ const Room = () => {
               />
             </div>
             <div 
-            className="flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
+            className={`flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3 transition-colors relative ${
+              isDraggingOver ? 'bg-neutral-800/50 border-[#beb59b]' : ''
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           >
               {msgs.map((m, i) => (
                 m.s3Key && m.fileName ? (
@@ -742,6 +791,7 @@ const Room = () => {
                     fileSize={m.fileSize || 0}
                     fileType={m.fileType || 'file'}
                     s3Key={m.s3Key}
+                    s3Url={m.s3Url}
                     isSelf={m.isSelf}
                     timestamp={m.timestamp}
                   />
@@ -761,37 +811,50 @@ const Room = () => {
                   <TypingBubble key={typingUser.user} user={typingUser.user} isRemoving={removingTypingUsers.has(typingUser.user)} />
               ))}
               <div ref={msgsEndRef}></div>
+              
+              {isDraggingOver && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl backdrop-blur-sm pointer-events-none">
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">📁</div>
+                    <p className="text-white font-semibold">Drop files here to upload</p>
+                  </div>
+                </div>
+              )}
           </div>
-            <div className="flex flex-row mt-4 w-full gap-2 md:gap-2">
-              <Input 
-                width="w-5/6" 
-                ref={msgRef} 
-                placeholder="Type a message"
-                onInput={handleTyping}
-                disabled={isConnecting || isFileUploading}
-                inputMode="text"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                onBlur={() => {
-                  // Prevent blur on mobile after sending message
-                  setTimeout(() => {
-                    if (document.activeElement !== msgRef.current) {
-                      msgRef.current?.focus();
+            <div className="flex flex-row mt-4 w-full gap-1 md:gap-2 items-center">
+              <div className="flex-1 border border-solid border-[#444444] rounded-xl flex items-center">
+                <FileInput
+                  onFileSelect={handleFileSelect}
+                  isLoading={isFileUploading}
+                  merged={true}
+                />
+                <Input 
+                  width="flex-1" 
+                  ref={msgRef} 
+                  placeholder="Type a message"
+                  onInput={handleTyping}
+                  disabled={isConnecting || isFileUploading}
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  merged={true}
+                  onBlur={() => {
+                    // Prevent blur on mobile after sending message
+                    setTimeout(() => {
+                      if (document.activeElement !== msgRef.current) {
+                        msgRef.current?.focus();
+                      }
+                    }, 10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
                     }
-                  }, 10);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-              ></Input>
-              <FileInput
-                onFileSelect={handleFileSelect}
-                isLoading={isFileUploading}
-              />
+                  }}
+                ></Input>
+              </div>
               <span className="hidden md:block w-1/6">
               <Button width="w-full" onClick={sendMessage} text={"Send"} ></Button></span>
               <span className="block md:hidden w-1/6">
