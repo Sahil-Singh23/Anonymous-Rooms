@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { Plus } from 'lucide-react';
+import Alert from './Alert';
 
 interface FileInputProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (files: File[]) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   merged?: boolean;
@@ -10,8 +11,16 @@ interface FileInputProps {
 
 export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = false }: FileInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string>('');
+  const [alertMessage, setAlertMessage] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+
+  const showError = (message: string) => {
+    setAlertMessage(message);
+  };
+
+  const closeAlert = () => {
+    setAlertMessage('');
+  };
 
   const ALLOWED_TYPES = [
     'image/jpeg',
@@ -29,6 +38,7 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
   ];
 
   const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+  const MAX_FILES = 5;
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -40,24 +50,41 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
     return null;
   };
 
-  const handleFileSelect = (file: File) => {
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
+  const handleFileSelect = (files: File[]) => {
+    if (files.length === 0) {
+      showError('No files selected');
       return;
     }
-    setError('');
-    // Directly send the file without showing a confirmation modal
-    onFileSelect(file);
+
+    if (files.length > MAX_FILES) {
+      showError(`Maximum ${MAX_FILES} files allowed (you selected ${files.length})`);
+      return;
+    }
+
+    const validationErrors: string[] = [];
+    for (const file of files) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        validationErrors.push(`${file.name}: ${validationError}`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      showError(validationErrors.join(' | '));
+      return;
+    }
+
+    // Send all files
+    onFileSelect(files);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      handleFileSelect(files);
     }
   };
 
@@ -76,14 +103,14 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
     e.stopPropagation();
     setDragActive(false);
 
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleFileSelect(file);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      handleFileSelect(files);
     }
   };
 
   const handleCancel = () => {
-    setError('');
+    closeAlert();
     onCancel?.();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -100,6 +127,7 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
         className="hidden"
         accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.mp4,.webm"
         disabled={isLoading}
+        multiple
       />
 
       <div
@@ -118,8 +146,8 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
         </button>
       </div>
 
-      {error && (
-        <div className="text-xs text-red-500 mt-1">{error}</div>
+      {alertMessage && (
+        <Alert message={alertMessage} type="error" onClose={closeAlert} />
       )}
     </>
   );

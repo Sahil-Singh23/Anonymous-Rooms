@@ -45,11 +45,14 @@ export const ImageModal = ({
         {/* Download button in modal */}
         <button
           onClick={onDownload}
-          disabled={isDownloading}
-          className="absolute top-4 left-4 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-50 transition-all"
+          className="absolute top-4 left-4 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-all"
           title="Download"
         >
-          <Download size={20} className="text-white" />
+          {isDownloading ? (
+            <div className="w-5 h-5 border-2 border-neutral-300 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Download size={20} className="text-white" />
+          )}
         </button>
       </div>
     </div>

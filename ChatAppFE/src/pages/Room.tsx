@@ -535,65 +535,68 @@ const Room = () => {
     }
   }
 
-  async function handleFileSelect(file: File) {
+  async function handleFileSelect(files: File[]) {
     try {
-      // Create optimistic message immediately with status='sending'
-      const now = Date.now();
-      const date = new Date(now);
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-
-      const optimisticFileMsg: ChatMessage = {
-        user: nicknameRef.current,
-        hours,
-        minutes,
-        isSelf: true,
-        status: 'sending',
-        timestamp: now,
-        fileId: `temp-${now}`,
-        s3Key: `temp-${now}`,
-        s3Url: '',
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size
-      };
-      
-      // Add to chat immediately so user sees it
-      setMsgs((prev) => [...prev, optimisticFileMsg]);
       setIsFileUploading(true);
 
-      // Upload file
-      const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
+      for (const file of files) {
+        // Create optimistic message immediately with status='sending'
+        const now = Date.now();
+        const date = new Date(now);
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
 
-      // Update message with real metadata
-      setMsgs((prev) =>
-        prev.map((m) =>
-          m.timestamp === now
-            ? {
-                ...m,
-                status: 'sent',
-                fileId: fileMetadata.fileId,
-                s3Key: fileMetadata.s3Key,
-                s3Url: fileMetadata.s3Url,
-              }
-            : m
-        )
-      );
-
-      // Send to server
-      ws.current?.send(JSON.stringify({
-        type: 'message',
-        payload: {
-          msg: '',
-          fileId: fileMetadata.fileId,
-          s3Key: fileMetadata.s3Key,
-          s3Url: fileMetadata.s3Url,
+        const optimisticFileMsg: ChatMessage = {
+          user: nicknameRef.current,
+          hours,
+          minutes,
+          isSelf: true,
+          status: 'sending',
+          timestamp: now,
+          fileId: `temp-${now}`,
+          s3Key: `temp-${now}`,
+          s3Url: '',
           fileName: file.name,
           fileType: file.type,
-          fileSize: file.size,
-          sessionId: sessionId
-        }
-      }));
+          fileSize: file.size
+        };
+        
+        // Add to chat immediately so user sees it
+        setMsgs((prev) => [...prev, optimisticFileMsg]);
+
+        // Upload file
+        const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
+
+        // Update message with real metadata
+        setMsgs((prev) =>
+          prev.map((m) =>
+            m.timestamp === now
+              ? {
+                  ...m,
+                  status: 'sent',
+                  fileId: fileMetadata.fileId,
+                  s3Key: fileMetadata.s3Key,
+                  s3Url: fileMetadata.s3Url,
+                }
+              : m
+          )
+        );
+
+        // Send to server
+        ws.current?.send(JSON.stringify({
+          type: 'message',
+          payload: {
+            msg: '',
+            fileId: fileMetadata.fileId,
+            s3Key: fileMetadata.s3Key,
+            s3Url: fileMetadata.s3Url,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            sessionId: sessionId
+          }
+        }));
+      }
 
       setIsFileUploading(false);
     } catch (error) {

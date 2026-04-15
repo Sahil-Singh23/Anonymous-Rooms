@@ -163,11 +163,14 @@ export const FileMessage = ({
             {status !== 'sending' && (
               <button
                 onClick={handleDownload}
-                disabled={isDownloading}
-                className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-50 transition-all"
+                className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-all"
                 title="Download"
               >
-                <Download size={16} className="text-white" />
+                {isDownloading ? (
+                  <div className="w-4 h-4 border-2 border-neutral-300 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Download size={16} className="text-white" />
+                )}
               </button>
             )}
             
@@ -229,11 +232,14 @@ export const FileMessage = ({
             {status !== 'sending' && (
               <button
                 onClick={handleDownload}
-                disabled={isDownloading}
-                className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full disabled:opacity-50 transition-all z-10"
+                className="absolute top-2 left-2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-all z-10"
                 title="Download"
               >
-                <Download size={16} className="text-white" />
+                {isDownloading ? (
+                  <div className="w-4 h-4 border-2 border-neutral-300 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Download size={16} className="text-white" />
+                )}
               </button>
             )}
             
@@ -287,11 +293,14 @@ export const FileMessage = ({
           ) : (
             <button
               onClick={handleDownload}
-              disabled={isDownloading}
-              className="flex-shrink-0 p-2 rounded-full transition-all disabled:opacity-50 hover:bg-neutral-700"
+              className="flex-shrink-0 p-2 rounded-full transition-all hover:bg-neutral-700"
               title="Download"
             >
-              <Download size={18} className="text-white" />
+              {isDownloading ? (
+                <div className="w-5 h-5 border-2 border-neutral-300 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Download size={18} className="text-white" />
+              )}
             </button>
           )}
         </div>
