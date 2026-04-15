@@ -147,8 +147,10 @@ export const FileMessage = ({
               <img
                 src={viewUrl}
                 alt={fileName}
-                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity select-none"
                 onClick={() => setShowModal(true)}
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
               />
             )}
             
@@ -217,7 +219,9 @@ export const FileMessage = ({
             ) : (
               <video
                 src={viewUrl}
-                className="w-full h-full object-cover bg-black"
+                className="w-full h-full object-cover bg-black select-none"
+                onContextMenu={(e) => e.preventDefault()}
+                controlsList="nodownload"
               />
             )}
             

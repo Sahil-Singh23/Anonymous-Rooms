@@ -31,7 +31,9 @@ export const ImageModal = ({
         <img
           src={imageUrl}
           alt={fileName}
-          className="max-w-full max-h-[90vh] object-contain"
+          className="max-w-full max-h-[90vh] object-contain select-none"
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
         />
 
         {/* Close button */}

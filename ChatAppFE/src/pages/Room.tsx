@@ -664,8 +664,7 @@ const Room = () => {
     
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      handleFileSelect(file);
+      handleFileSelect(Array.from(files));
     }
   }
 
