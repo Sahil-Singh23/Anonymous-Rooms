@@ -81,6 +81,8 @@ interface Message{
     user: string,
     time:number,
     sessionId: string,
+    userId?: number | null,
+    isAuthenticated?: boolean,
     fileId?: number,
     s3Key?: string,
     s3Url?: string,
@@ -98,16 +100,17 @@ interface RoomData{
 interface ClientInfo{
     socket: WebSocket,
     user: string,
-    //not really being used as of now, might need in future for last seen feature
+    sessionId: string,
+    userId?: number | null,
+    isAuthenticated?: boolean,
     lastSeen: number,
-   // lastMessageTime: number,
     disconnectTimeout?: NodeJS.Timeout 
 }
 
 //roomcode -> roomdata 
 const rooms = new Map<string,RoomData>();
 // const rooms = new Map<string,Set<WebSocket>>();
-const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string}>();
+const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string, userId?: number | null, isAuthenticated?: boolean}>();
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -156,7 +159,7 @@ wss.on("connection",(socket, request)=>{
             return;
         }
         if(data.type==="join"){
-            const {roomCode,username,sessionId,lastMessageTime} = data.payload || {};
+            const {roomCode,username,sessionId,userId,isAuthenticated,lastMessageTime} = data.payload || {};
            if(!data.payload) {
                 socket.send(JSON.stringify({
                     type: "error",
@@ -209,7 +212,11 @@ wss.on("connection",(socket, request)=>{
                         if(cur[0]!=sessionId){
                             cur[1].socket.send(JSON.stringify({
                                 type: "user-joined",
-                                payload: { user: username, userCount }
+                                payload: { 
+                                    user: username, 
+                                    userCount,
+                                    isAuthenticated: isAuthenticated || false
+                                }
                             }));
                         }
                     }
@@ -219,13 +226,16 @@ wss.on("connection",(socket, request)=>{
                 clientsMap.set(sessionId,{
                     socket:socket,
                     user:username,
+                    sessionId:sessionId,
+                    userId: userId || null,
+                    isAuthenticated: isAuthenticated || false,
                     lastSeen: Date.now(),
                 });
                 // Clear empty timestamp when someone joins
                 if (clientsMap.size === 1) {
                     roomData.emptyingSince = undefined;
                 }
-                clients.set(socket,{user:username,roomCode,sessionId});
+                clients.set(socket,{user:username,roomCode,sessionId,userId: userId || null, isAuthenticated: isAuthenticated || false});
                 //send msgs now based on the last message time 
 
                 const {messageHistory} = roomData;
@@ -265,7 +275,7 @@ wss.on("connection",(socket, request)=>{
                 return;
             }
             
-            const {user,roomCode,sessionId} = client
+            const {user,roomCode,sessionId,userId,isAuthenticated} = client
             const roomData = rooms.get(roomCode);
             if(!roomData) return ; 
             const time = Date.now();
@@ -275,6 +285,8 @@ wss.on("connection",(socket, request)=>{
                 user,
                 time,
                 sessionId,
+                userId: userId || null,
+                isAuthenticated: isAuthenticated || false,
                 ...(hasFileData && { fileId, s3Key, s3Url, fileName, fileType, fileSize })
             }
             roomData.messageHistory.push(msgObj);
