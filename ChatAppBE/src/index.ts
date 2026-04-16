@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import fileRoutes from "./routes/s3files.js"
 import { startFileCleanupJob } from "./jobs/fileCleanup.js";
+import { globalLimiter } from "./middlewares/rateLimiter.js";
 
 
 
@@ -18,6 +19,7 @@ const app = express();
 app.use(express.json());
 app.use(cors({origin:["https://anonymous-room-websockets-one.vercel.app","http://localhost:2005"],credentials: true}));
 app.use(cookieParser());
+app.use(globalLimiter); // Apply global rate limiting
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
