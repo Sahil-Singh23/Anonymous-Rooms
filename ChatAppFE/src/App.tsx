@@ -1,14 +1,23 @@
-import { BrowserRouter,Routes,Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Landing from './pages/Landing'
 import Room from './pages/Room'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import AuthCallback from './pages/AuthCallback'
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path='/' element={<Landing></Landing>}></Route>
-        <Route path='/room/:roomCode' element={<Room></Room>}></Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path='/' element={<Landing></Landing>}></Route>
+          <Route path='/login' element={<Login></Login>}></Route>
+          <Route path='/signup' element={<Signup></Signup>}></Route>
+          <Route path='/auth/callback' element={<AuthCallback></AuthCallback>}></Route>
+          <Route path='/room/:roomCode' element={<Room></Room>}></Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
