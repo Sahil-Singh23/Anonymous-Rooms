@@ -12,7 +12,6 @@ interface VideoModalProps {
 export const VideoModal = ({
   isOpen,
   videoUrl,
-  fileName,
   isDownloading,
   onClose,
   onDownload,

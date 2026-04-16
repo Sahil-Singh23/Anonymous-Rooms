@@ -22,7 +22,6 @@ export const FileMessage = ({
   fileSize,
   fileType,
   s3Key,
-  s3Url,
   isSelf,
   timestamp,
   status = 'sent',

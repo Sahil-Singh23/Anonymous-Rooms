@@ -3,6 +3,7 @@ import { forwardRef } from "react"
 type inputProps = {
     placeholder: string,
     width: string,
+    type?: string,
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void,
     onInput?: (e: React.FormEvent<HTMLInputElement>) => void,
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
@@ -25,7 +26,7 @@ const Input = forwardRef<HTMLInputElement, inputProps>((props, ref) => {
     <div className={`${props.width}`}>
       <input 
         ref={ref}
-        type="text" 
+        type={props.type || "text"}
         className={`flex flex-col shrink-0 items-center text-left py-3 ${paddingClass} ${borderClass} w-full text-white bg-transparent focus:outline-none focus:border-[#beb59b]`}
         placeholder={props.placeholder}
         onKeyDown={props.onKeyDown}

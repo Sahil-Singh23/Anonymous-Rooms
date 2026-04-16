@@ -30,7 +30,7 @@ interface ChatMessage {
   isSelf: boolean;
   status?: 'sending' | 'sent';
   timestamp: number;
-  fileId?: number;
+  fileId?: string | number;
   s3Key?: string;
   s3Url?: string;
   fileName?: string;

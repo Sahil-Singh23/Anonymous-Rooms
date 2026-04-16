@@ -4,15 +4,13 @@ import Alert from './Alert';
 
 interface FileInputProps {
   onFileSelect: (files: File[]) => void;
-  onCancel?: () => void;
   isLoading?: boolean;
   merged?: boolean;
 }
 
-export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = false }: FileInputProps) => {
+export const FileInput = ({ onFileSelect, isLoading = false, merged = false }: FileInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [alertMessage, setAlertMessage] = useState<string>('');
-  const [dragActive, setDragActive] = useState(false);
 
   const showError = (message: string) => {
     setAlertMessage(message);
@@ -91,29 +89,15 @@ export const FileInput = ({ onFileSelect, onCancel, isLoading = false, merged = 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
 
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length > 0) {
       handleFileSelect(files);
-    }
-  };
-
-  const handleCancel = () => {
-    closeAlert();
-    onCancel?.();
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
     }
   };
 
