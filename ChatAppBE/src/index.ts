@@ -8,8 +8,10 @@ import passport from "passport";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import fileRoutes from "./routes/s3files.js"
+import { createApiRouter } from "./routes/api.js"
 import { startFileCleanupJob } from "./jobs/fileCleanup.js";
-import { globalLimiter } from "./middlewares/rateLimiter.js";
+import { globalLimiter, apiLimiter } from "./middlewares/rateLimiter.js";
+import type { Message, RoomData, ClientInfo } from "./types/room.js";
 
 
 
@@ -78,44 +80,20 @@ setInterval(() => {
 // Start file cleanup job - deletes expired files from S3 every hour
 startFileCleanupJob();
 
-interface Message{
-    msg: string,
-    user: string,
-    time:number,
-    sessionId: string,
-    userId?: number | null,
-    isAuthenticated?: boolean,
-    fileId?: number,
-    s3Key?: string,
-    s3Url?: string,
-    fileName?: string,
-    fileType?: string,
-    fileSize?: number
-}
-interface RoomData{
-    messageHistory: Message[],
-    createdAt: number,
-    //session id -> their data 
-    clientsMap: Map<string,ClientInfo>,
-    emptyingSince?: number | undefined  // Timestamp when room became empty
-}
-interface ClientInfo{
-    socket: WebSocket,
-    user: string,
-    sessionId: string,
-    userId?: number | null,
-    isAuthenticated?: boolean,
-    lastSeen: number,
-    disconnectTimeout?: NodeJS.Timeout 
-}
-
 //roomcode -> roomdata 
 const rooms = new Map<string,RoomData>();
-// const rooms = new Map<string,Set<WebSocket>>();
 const clients = new Map<WebSocket,{user:string,roomCode:string, sessionId:string, userId?: number | null, isAuthenticated?: boolean}>();
 
 // Initialize Passport
 app.use(passport.initialize());
+
+// Create API router with rooms map
+const apiRoutes = createApiRouter(rooms);
+
+// Apply API rate limiter to API and file routes
+app.use("/api/v1", apiLimiter);
+app.use("/api/v1", apiRoutes);
+app.use("/files", apiLimiter);
 
 // Health check endpoint 
 app.get("/", (req,res)=>{
@@ -124,24 +102,6 @@ app.get("/", (req,res)=>{
 
 app.use("/auth", authRoutes);
 app.use("/files",fileRoutes)
-
-app.post("/api/v1/create", (req,res)=>{
-    const roomCode = random(6);
-    rooms.set(roomCode,{
-        messageHistory: [],
-        createdAt: Date.now(),
-        clientsMap: new Map<string,ClientInfo>()
-    });
-    res.json({
-        roomCode
-    })
-})
-app.post("/api/v1/room/:roomCode",(req,res)=>{
-    if(rooms.has(req.params.roomCode))
-        return res.json({message:"Valid room"})
-    else 
-        return res.status(404).json({message:"Invalid room"})
-})
 
 wss.on("connection",(socket, request)=>{
     //user enters here 

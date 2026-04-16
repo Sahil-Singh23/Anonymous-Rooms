@@ -5,6 +5,7 @@ import passport from "passport"
 import argon2 from "argon2";
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import requireAuth from "../middlewares/requireAuth.js";
+import { authLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
@@ -45,7 +46,7 @@ passport.use(new GoogleStrategy({
 
 const normalizeEmail = (v:String) => (v || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
 
-router.get("/login/federated/google",passport.authenticate('google',{
+router.get("/login/federated/google", authLimiter, passport.authenticate('google',{
     scope: ['profile','email']
 }));
 
@@ -82,7 +83,7 @@ router.get("/login/federated/google/callback",
   }
 );
 
-router.post("/signup",async(req,res)=>{
+router.post("/signup", authLimiter, async(req,res)=>{
     try{
         const { name, email, password } = req.body || {};
         const trimmedName = (name || "").trim();
@@ -133,7 +134,7 @@ router.post("/signup",async(req,res)=>{
     }
 })
 
-router.post("/login",async(req,res)=>{
+router.post("/login", authLimiter, async(req,res)=>{
     try{
         const { email, password } = req.body || {};
         if (!email || !password) {
