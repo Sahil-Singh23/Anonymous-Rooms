@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 //import requireAuth from "../middlewares/requireAuth";
 import { getObjectURL, getPutObjectURL, deleteObjectFromS3 } from "../utils/s3.js";
 import { client } from "../prisma.js";
+import { fileUploadLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ function validateFileType(filetype: string): boolean {
   return ALLOWED_FILE_TYPES.includes(filetype);
 }
 
-router.post("/upload",async (req,res)=>{
+router.post("/upload", fileUploadLimiter, async (req,res)=>{
     const {filename,filetype,filesize,roomCode} = req.body; 
 
     if(!filename || !filetype || !filesize || !roomCode)  return res.status(400).json({message:"Invalid payload"});
@@ -57,7 +58,7 @@ router.post("/upload",async (req,res)=>{
     }
 })
 
-router.post("/confirm",async(req,res)=>{
+router.post("/confirm", fileUploadLimiter, async(req,res)=>{
     try {
         const {key,filename,filetype,filesize} = req.body;
         if(!key || !filename || !filetype || !filesize) return res.status(400).json({error:"Invalid payload"});

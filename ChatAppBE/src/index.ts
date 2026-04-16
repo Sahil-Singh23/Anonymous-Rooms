@@ -1,6 +1,7 @@
 import express from "express";
 import { WebSocketServer,WebSocket } from "ws";
 import cors from 'cors';
+import helmet from "helmet";
 import random from "./utils/random.js";
 import * as dotenv from 'dotenv';
 
@@ -10,7 +11,9 @@ import authRoutes from "./routes/auth.js";
 import fileRoutes from "./routes/s3files.js"
 import { createApiRouter } from "./routes/api.js"
 import { startFileCleanupJob } from "./jobs/fileCleanup.js";
-import { globalLimiter, apiLimiter } from "./middlewares/rateLimiter.js";
+import { globalLimiter, apiLimiter, checkWebSocketRateLimit, cleanupWebSocketRateLimiters } from "./middlewares/rateLimiter.js";
+import { sanitizeMessage } from "./utils/messageSanitizer.js";
+import { validateUsername, validateRoomCode } from "./utils/validators.js";
 import type { Message, RoomData, ClientInfo } from "./types/room.js";
 
 
@@ -18,7 +21,14 @@ import type { Message, RoomData, ClientInfo } from "./types/room.js";
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
 const app = express();
-app.use(express.json());
+
+// Security headers (helmet)
+app.use(helmet());
+
+// Request size limits: 10KB JSON, 50KB raw
+app.use(express.json({ limit: "10kb" }));
+app.use(express.raw({ limit: "50kb" }));
+
 app.use(cors({origin:["https://anonymous-room-websockets-one.vercel.app","http://localhost:2005"],credentials: true}));
 app.use(cookieParser());
 app.use(globalLimiter); // Apply global rate limiting
@@ -75,6 +85,9 @@ setInterval(() => {
     rooms.delete(roomCode);
     console.log(`Deleted empty room: ${roomCode}`);
   }
+
+  // Clean up old WebSocket rate limiters to prevent memory leaks
+  cleanupWebSocketRateLimiters();
 }, CLEANUP_INTERVAL);
 
 // Start file cleanup job - deletes expired files from S3 every hour
@@ -129,18 +142,31 @@ wss.on("connection",(socket, request)=>{
                 }));
                 return;
             }
-            if(!roomCode || !rooms.has(roomCode)){
+
+            // Validate room code format
+            const roomValidation = validateRoomCode(roomCode);
+            if (!roomValidation.valid) {
+                socket.send(JSON.stringify({
+                    type: "error",
+                    payload: { message: roomValidation.error }
+                }));
+                return;
+            }
+
+            if(!rooms.has(roomCode)){
                 socket.send(JSON.stringify({
                     type: "error",
                     payload: { message: "Room closed" }
                 }));
-
                 return;
             }
-            if(!username || typeof username !=='string'){
+
+            // Validate username format
+            const usernameValidation = validateUsername(username);
+            if (!usernameValidation.valid) {
                 socket.send(JSON.stringify({
                     type: "error",
-                    payload: { message: "Invalid username" }
+                    payload: { message: usernameValidation.error }
                 }));
                 return;
             }
@@ -151,10 +177,13 @@ wss.on("connection",(socket, request)=>{
                 }));
                 return;
             }
-            else{
-                const roomData = rooms.get(roomCode);
-                if(!roomData) return; 
-                const {clientsMap} = roomData;
+
+            // Use trimmed username after validation
+            const validatedUsername = username.trim();
+
+            const roomData = rooms.get(roomCode);
+            if(!roomData) return; 
+            const {clientsMap} = roomData;
                 if(clientsMap.has(sessionId)){
                     //session id exists reconnect flow, back within a minute
                     //1. replace the old socket, 
@@ -175,7 +204,7 @@ wss.on("connection",(socket, request)=>{
                             cur[1].socket.send(JSON.stringify({
                                 type: "user-joined",
                                 payload: { 
-                                    user: username, 
+                                    user: validatedUsername, 
                                     userCount,
                                     isAuthenticated: isAuthenticated || false
                                 }
@@ -187,7 +216,7 @@ wss.on("connection",(socket, request)=>{
                 //update both maps here regardless rejoin or join , with new socket which replaces the old one 
                 clientsMap.set(sessionId,{
                     socket:socket,
-                    user:username,
+                    user:validatedUsername,
                     sessionId:sessionId,
                     userId: userId || null,
                     isAuthenticated: isAuthenticated || false,
@@ -197,7 +226,7 @@ wss.on("connection",(socket, request)=>{
                 if (clientsMap.size === 1) {
                     roomData.emptyingSince = undefined;
                 }
-                clients.set(socket,{user:username,roomCode,sessionId,userId: userId || null, isAuthenticated: isAuthenticated || false});
+                clients.set(socket,{user:validatedUsername,roomCode,sessionId,userId: userId || null, isAuthenticated: isAuthenticated || false});
                 //send msgs now based on the last message time 
 
                 const {messageHistory} = roomData;
@@ -206,12 +235,11 @@ wss.on("connection",(socket, request)=>{
                     type: "joined",
                     payload: {
                         roomCode,
-                        user: username,
+                        user: validatedUsername,
                         userCount: clientsMap.size,
                         msgs
                     }
                 }))
-            }
             
         }
         else if(data.type==="message"){
@@ -223,6 +251,16 @@ wss.on("connection",(socket, request)=>{
                 }));
                 return;
             }
+
+            // Check WebSocket message rate limit (10 messages per second per session)
+            if (!checkWebSocketRateLimit(client.sessionId)) {
+                socket.send(JSON.stringify({
+                    type: "error",
+                    payload: { message: "Message rate limit exceeded. Maximum 10 messages per second." }
+                }));
+                return;
+            }
+
             const {msg, fileId, s3Key, s3Url, fileName, fileType, fileSize} = data.payload || {};
             
             // Validate: either msg is present or file metadata is present
@@ -236,6 +274,20 @@ wss.on("connection",(socket, request)=>{
                 }));
                 return;
             }
+
+            // Validate and sanitize message text if present
+            let sanitizedMsg = '';
+            if (hasMessage) {
+                const sanitization = sanitizeMessage(msg);
+                if (sanitization.error) {
+                    socket.send(JSON.stringify({
+                        type: "error",
+                        payload: { message: sanitization.error }
+                    }));
+                    return;
+                }
+                sanitizedMsg = sanitization.sanitized;
+            }
             
             const {user,roomCode,sessionId,userId,isAuthenticated} = client
             const roomData = rooms.get(roomCode);
@@ -243,7 +295,7 @@ wss.on("connection",(socket, request)=>{
             const time = Date.now();
 
             const msgObj : Message = {
-                msg: msg || '',
+                msg: sanitizedMsg,
                 user,
                 time,
                 sessionId,
