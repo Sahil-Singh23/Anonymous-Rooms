@@ -2,6 +2,9 @@ export interface AuthUser {
   id: number;
   name: string;
   email: string;
+  profilePicUrl?: string | null;
+  totalRoomsJoined?: number;
+  createdAt?: string;
 }
 
 export interface GuestSession {
