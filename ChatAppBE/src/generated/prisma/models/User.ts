@@ -28,10 +28,12 @@ export type AggregateUser = {
 
 export type UserAvgAggregateOutputType = {
   id: number | null
+  totalRoomsJoined: number | null
 }
 
 export type UserSumAggregateOutputType = {
   id: number | null
+  totalRoomsJoined: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -40,6 +42,10 @@ export type UserMinAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   googleId: string | null
+  profilePicKey: string | null
+  profilePicUrl: string | null
+  lastRoomJoinedCode: string | null
+  totalRoomsJoined: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +56,10 @@ export type UserMaxAggregateOutputType = {
   email: string | null
   passwordHash: string | null
   googleId: string | null
+  profilePicKey: string | null
+  profilePicUrl: string | null
+  lastRoomJoinedCode: string | null
+  totalRoomsJoined: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +70,10 @@ export type UserCountAggregateOutputType = {
   email: number
   passwordHash: number
   googleId: number
+  profilePicKey: number
+  profilePicUrl: number
+  lastRoomJoinedCode: number
+  totalRoomsJoined: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -68,10 +82,12 @@ export type UserCountAggregateOutputType = {
 
 export type UserAvgAggregateInputType = {
   id?: true
+  totalRoomsJoined?: true
 }
 
 export type UserSumAggregateInputType = {
   id?: true
+  totalRoomsJoined?: true
 }
 
 export type UserMinAggregateInputType = {
@@ -80,6 +96,10 @@ export type UserMinAggregateInputType = {
   email?: true
   passwordHash?: true
   googleId?: true
+  profilePicKey?: true
+  profilePicUrl?: true
+  lastRoomJoinedCode?: true
+  totalRoomsJoined?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -90,6 +110,10 @@ export type UserMaxAggregateInputType = {
   email?: true
   passwordHash?: true
   googleId?: true
+  profilePicKey?: true
+  profilePicUrl?: true
+  lastRoomJoinedCode?: true
+  totalRoomsJoined?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +124,10 @@ export type UserCountAggregateInputType = {
   email?: true
   passwordHash?: true
   googleId?: true
+  profilePicKey?: true
+  profilePicUrl?: true
+  lastRoomJoinedCode?: true
+  totalRoomsJoined?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -197,6 +225,10 @@ export type UserGroupByOutputType = {
   email: string
   passwordHash: string | null
   googleId: string | null
+  profilePicKey: string | null
+  profilePicUrl: string | null
+  lastRoomJoinedCode: string | null
+  totalRoomsJoined: number
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -230,6 +262,10 @@ export type UserWhereInput = {
   email?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringNullableFilter<"User"> | string | null
   googleId?: Prisma.StringNullableFilter<"User"> | string | null
+  profilePicKey?: Prisma.StringNullableFilter<"User"> | string | null
+  profilePicUrl?: Prisma.StringNullableFilter<"User"> | string | null
+  lastRoomJoinedCode?: Prisma.StringNullableFilter<"User"> | string | null
+  totalRoomsJoined?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   files?: Prisma.FileListRelationFilter
@@ -241,6 +277,10 @@ export type UserOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrderInput | Prisma.SortOrder
   googleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profilePicKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  profilePicUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastRoomJoinedCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   files?: Prisma.FileOrderByRelationAggregateInput
@@ -255,6 +295,10 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   name?: Prisma.StringFilter<"User"> | string
   passwordHash?: Prisma.StringNullableFilter<"User"> | string | null
+  profilePicKey?: Prisma.StringNullableFilter<"User"> | string | null
+  profilePicUrl?: Prisma.StringNullableFilter<"User"> | string | null
+  lastRoomJoinedCode?: Prisma.StringNullableFilter<"User"> | string | null
+  totalRoomsJoined?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   files?: Prisma.FileListRelationFilter
@@ -266,6 +310,10 @@ export type UserOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrderInput | Prisma.SortOrder
   googleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  profilePicKey?: Prisma.SortOrderInput | Prisma.SortOrder
+  profilePicUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastRoomJoinedCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -284,6 +332,10 @@ export type UserScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"User"> | string
   passwordHash?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   googleId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  profilePicKey?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  profilePicUrl?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  lastRoomJoinedCode?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  totalRoomsJoined?: Prisma.IntWithAggregatesFilter<"User"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -293,6 +345,10 @@ export type UserCreateInput = {
   email: string
   passwordHash?: string | null
   googleId?: string | null
+  profilePicKey?: string | null
+  profilePicUrl?: string | null
+  lastRoomJoinedCode?: string | null
+  totalRoomsJoined?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   files?: Prisma.FileCreateNestedManyWithoutUserInput
@@ -304,6 +360,10 @@ export type UserUncheckedCreateInput = {
   email: string
   passwordHash?: string | null
   googleId?: string | null
+  profilePicKey?: string | null
+  profilePicUrl?: string | null
+  lastRoomJoinedCode?: string | null
+  totalRoomsJoined?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   files?: Prisma.FileUncheckedCreateNestedManyWithoutUserInput
@@ -314,6 +374,10 @@ export type UserUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   files?: Prisma.FileUpdateManyWithoutUserNestedInput
@@ -325,6 +389,10 @@ export type UserUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   files?: Prisma.FileUncheckedUpdateManyWithoutUserNestedInput
@@ -336,6 +404,10 @@ export type UserCreateManyInput = {
   email: string
   passwordHash?: string | null
   googleId?: string | null
+  profilePicKey?: string | null
+  profilePicUrl?: string | null
+  lastRoomJoinedCode?: string | null
+  totalRoomsJoined?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -345,6 +417,10 @@ export type UserUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -355,6 +431,10 @@ export type UserUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -365,12 +445,17 @@ export type UserCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
+  profilePicKey?: Prisma.SortOrder
+  profilePicUrl?: Prisma.SortOrder
+  lastRoomJoinedCode?: Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type UserAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -379,6 +464,10 @@ export type UserMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
+  profilePicKey?: Prisma.SortOrder
+  profilePicUrl?: Prisma.SortOrder
+  lastRoomJoinedCode?: Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -389,12 +478,17 @@ export type UserMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
+  profilePicKey?: Prisma.SortOrder
+  profilePicUrl?: Prisma.SortOrder
+  lastRoomJoinedCode?: Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type UserSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  totalRoomsJoined?: Prisma.SortOrder
 }
 
 export type UserNullableScalarRelationFilter = {
@@ -410,16 +504,16 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type IntFieldUpdateOperationsInput = {
   set?: number
   increment?: number
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type UserCreateNestedOneWithoutFilesInput = {
@@ -443,6 +537,10 @@ export type UserCreateWithoutFilesInput = {
   email: string
   passwordHash?: string | null
   googleId?: string | null
+  profilePicKey?: string | null
+  profilePicUrl?: string | null
+  lastRoomJoinedCode?: string | null
+  totalRoomsJoined?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -453,6 +551,10 @@ export type UserUncheckedCreateWithoutFilesInput = {
   email: string
   passwordHash?: string | null
   googleId?: string | null
+  profilePicKey?: string | null
+  profilePicUrl?: string | null
+  lastRoomJoinedCode?: string | null
+  totalRoomsJoined?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -478,6 +580,10 @@ export type UserUpdateWithoutFilesInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -488,6 +594,10 @@ export type UserUncheckedUpdateWithoutFilesInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profilePicUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastRoomJoinedCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totalRoomsJoined?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -529,6 +639,10 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   email?: boolean
   passwordHash?: boolean
   googleId?: boolean
+  profilePicKey?: boolean
+  profilePicUrl?: boolean
+  lastRoomJoinedCode?: boolean
+  totalRoomsJoined?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   files?: boolean | Prisma.User$filesArgs<ExtArgs>
@@ -541,6 +655,10 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   passwordHash?: boolean
   googleId?: boolean
+  profilePicKey?: boolean
+  profilePicUrl?: boolean
+  lastRoomJoinedCode?: boolean
+  totalRoomsJoined?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -551,6 +669,10 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   passwordHash?: boolean
   googleId?: boolean
+  profilePicKey?: boolean
+  profilePicUrl?: boolean
+  lastRoomJoinedCode?: boolean
+  totalRoomsJoined?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -561,11 +683,15 @@ export type UserSelectScalar = {
   email?: boolean
   passwordHash?: boolean
   googleId?: boolean
+  profilePicKey?: boolean
+  profilePicUrl?: boolean
+  lastRoomJoinedCode?: boolean
+  totalRoomsJoined?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "passwordHash" | "googleId" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "passwordHash" | "googleId" | "profilePicKey" | "profilePicUrl" | "lastRoomJoinedCode" | "totalRoomsJoined" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   files?: boolean | Prisma.User$filesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -584,6 +710,10 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     email: string
     passwordHash: string | null
     googleId: string | null
+    profilePicKey: string | null
+    profilePicUrl: string | null
+    lastRoomJoinedCode: string | null
+    totalRoomsJoined: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1015,6 +1145,10 @@ export interface UserFieldRefs {
   readonly email: Prisma.FieldRef<"User", 'String'>
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
   readonly googleId: Prisma.FieldRef<"User", 'String'>
+  readonly profilePicKey: Prisma.FieldRef<"User", 'String'>
+  readonly profilePicUrl: Prisma.FieldRef<"User", 'String'>
+  readonly lastRoomJoinedCode: Prisma.FieldRef<"User", 'String'>
+  readonly totalRoomsJoined: Prisma.FieldRef<"User", 'Int'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }

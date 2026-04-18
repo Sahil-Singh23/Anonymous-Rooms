@@ -598,6 +598,10 @@ export const UserScalarFieldEnum = {
   email: 'email',
   passwordHash: 'passwordHash',
   googleId: 'googleId',
+  profilePicKey: 'profilePicKey',
+  profilePicUrl: 'profilePicUrl',
+  lastRoomJoinedCode: 'lastRoomJoinedCode',
+  totalRoomsJoined: 'totalRoomsJoined',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
