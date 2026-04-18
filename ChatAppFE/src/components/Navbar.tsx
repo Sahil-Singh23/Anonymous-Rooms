@@ -40,8 +40,12 @@ const Navbar = () => {
         onMouseEnter={() => setIsOpen(true)}
         className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
       >
-        <div className="w-8 h-8 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-300">
-          <User size={22} />
+        <div className="w-8 h-8 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-300 overflow-hidden bg-neutral-800">
+          {isAuthenticated && currentUser?.profilePicUrl ? (
+            <img src={currentUser.profilePicUrl} alt={currentUser.name} className="w-full h-full object-cover" />
+          ) : (
+            <User size={22} />
+          )}
         </div>
         <span className="text-sm font-medium text-neutral-300">{displayName}</span>
       </button>
@@ -50,13 +54,24 @@ const Navbar = () => {
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg py-2 min-w-max">
           {isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-4 py-2 text-red-300 hover:text-red-200 hover:bg-neutral-800 transition-colors duration-200 text-sm"
-            >
-              <LogOut size={14} />
-              Logout
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  navigate('/profile');
+                  setIsOpen(false);
+                }}
+                className="w-full px-4 py-2 text-left text-neutral-200 hover:bg-neutral-800 transition-colors duration-200 text-sm"
+              >
+                Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-2 text-red-300 hover:text-red-200 hover:bg-neutral-800 transition-colors duration-200 text-sm"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <button

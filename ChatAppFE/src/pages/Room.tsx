@@ -14,6 +14,7 @@ import ShareLinkModal from "../components/ShareLinkModal"
 import FileInput from "../components/FileInput"
 import FileMessage from "../components/FileMessage"
 import { completeFileUpload } from "../services/fileUploadService"
+import { useAuth } from "../hooks/useAuth"
 
 interface StoredSession{
   roomCode: string ,
@@ -39,6 +40,7 @@ interface ChatMessage {
 }
 
 const Room = () => {
+  const { currentUser, isAuthenticated } = useAuth();
   const { roomCode: paramRoomCode } = useParams<{ roomCode?: string }>();
   const [msgs, setMsgs] = useState<ChatMessage[]>([])
   const msgRef = useRef<HTMLInputElement | null>(null);
@@ -244,7 +246,9 @@ const Room = () => {
                 roomCode: data.roomCode,
                 username: data.nickname,
                 sessionId: sessionId,
-                lastMessageTime: lastMessageTime()
+                lastMessageTime: lastMessageTime(),
+                userId: isAuthenticated && currentUser ? currentUser.id : undefined,
+                isAuthenticated: isAuthenticated
               }
             }))
             

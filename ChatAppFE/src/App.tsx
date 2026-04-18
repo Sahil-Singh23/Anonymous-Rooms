@@ -5,6 +5,7 @@ import Room from './pages/Room'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import AuthCallback from './pages/AuthCallback'
+import Profile from './pages/Profile'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path='/signup' element={<Signup></Signup>}></Route>
           <Route path='/auth/callback' element={<AuthCallback></AuthCallback>}></Route>
           <Route path='/room/:roomCode' element={<Room></Room>}></Route>
+          <Route path='/profile' element={<Profile></Profile>}></Route>
         </Routes>
       </AuthProvider>
     </BrowserRouter>
