@@ -6,6 +6,7 @@ import argon2 from "argon2";
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import requireAuth from "../middlewares/requireAuth.js";
 import { authLimiter } from "../middlewares/rateLimiter.js";
+import { getProfilePicUrl } from "./profile.js";
 
 const router = express.Router();
 
@@ -117,6 +118,12 @@ router.post("/signup", authLimiter, async(req,res)=>{
 
         const token = jwt.sign({userId:user.id},JWT_SECRET,{ expiresIn: "30d" })
 
+        // Generate presigned GET URL if profile picture exists
+        let profilePicUrl: string | undefined;
+        if (user.profilePicKey) {
+            profilePicUrl = await getProfilePicUrl(user.id, user.profilePicKey);
+        }
+
         res
         .cookie("token", token, {
             httpOnly: true,
@@ -126,7 +133,12 @@ router.post("/signup", authLimiter, async(req,res)=>{
         })
         .status(201)
         .json({
-            user: { id: user.id, name: user.name, email: user.email }
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email,
+                ...(profilePicUrl && { profilePicUrl })
+            }
         });
     }catch(e:any){
         console.error("Signup error:", e);
@@ -154,12 +166,23 @@ router.post("/login", authLimiter, async(req,res)=>{
 
         const token = jwt.sign({userId:user.id},JWT_SECRET,{ expiresIn: "30d" })
 
+        // Generate presigned GET URL if profile picture exists
+        let profilePicUrl: string | undefined;
+        if (user.profilePicKey) {
+            profilePicUrl = await getProfilePicUrl(user.id, user.profilePicKey);
+        }
+
         res.cookie("token",token,{
             httpOnly:true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             maxAge: 30 * 24 * 60 * 60 * 1000
-        }).status(200).json({user:{id: user.id, name: user.name, email: user.email}});
+        }).status(200).json({user:{
+            id: user.id, 
+            name: user.name, 
+            email: user.email,
+            ...(profilePicUrl && { profilePicUrl })
+        }});
 
     }catch(e:any){
         console.error("SignIn error:", e);
