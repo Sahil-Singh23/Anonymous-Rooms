@@ -9,14 +9,14 @@ import passport from "passport";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import fileRoutes from "./routes/s3files.js"
+import profileRoutes from "./routes/profile.js"
 import { createApiRouter } from "./routes/api.js"
 import { startFileCleanupJob } from "./jobs/fileCleanup.js";
 import { globalLimiter, apiLimiter, checkWebSocketRateLimit, cleanupWebSocketRateLimiters } from "./middlewares/rateLimiter.js";
 import { sanitizeMessage } from "./utils/messageSanitizer.js";
 import { validateUsername, validateRoomCode } from "./utils/validators.js";
 import type { Message, RoomData, ClientInfo } from "./types/room.js";
-
-
+import {client} from "./prisma.js"
 
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8000;
@@ -44,8 +44,6 @@ const wss = new WebSocketServer({
 server.on("upgrade", (req, socket, head) => {
   const origin = req.headers.origin as string | undefined;
 
-  console.log("Upgrade attempt from:", origin);
-
   const allowed =
     !origin ||
     origin === "https://apichatapp.duckdns.org" ||
@@ -54,7 +52,6 @@ server.on("upgrade", (req, socket, head) => {
     origin === "http://localhost:2005";
 
   if (!allowed) {
-    console.log("❌ Rejected origin:", origin);
     socket.destroy();
     return;
   }
@@ -83,7 +80,6 @@ setInterval(() => {
   }
   for (const roomCode of roomsToDelete) {
     rooms.delete(roomCode);
-    console.log(`Deleted empty room: ${roomCode}`);
   }
 
   // Clean up old WebSocket rate limiters to prevent memory leaks
@@ -114,19 +110,16 @@ app.get("/", (req,res)=>{
 })
 
 app.use("/auth", authRoutes);
-app.use("/files",fileRoutes)
+app.use("/files", fileRoutes);
+app.use("/profile", profileRoutes)
 
 wss.on("connection",(socket, request)=>{
     //user enters here 
-    console.log("CLIENT CONNECTED from:", request.headers.origin);
-    console.log("Headers:", request.headers);
     
     socket.on("message",(e)=>{
         let data;
-        console.log("MESSAGE RECEIVED:",e);
         try{
             data = JSON.parse(e.toString());
-            console.log("PARSED:", data);
             
         }catch(e){
             console.error("JSON ERROR:", e);
@@ -227,6 +220,31 @@ wss.on("connection",(socket, request)=>{
                     roomData.emptyingSince = undefined;
                 }
                 clients.set(socket,{user:validatedUsername,roomCode,sessionId,userId: userId || null, isAuthenticated: isAuthenticated || false});
+
+                // Track room join statistics for authenticated users
+                if (userId) {
+                    (async () => {
+                        try {
+                            const user = await client.user.findUnique({
+                                where: { id: userId },
+                                select: { lastRoomJoinedCode: true }
+                            });
+                            
+                            // Only increment if this is a new room
+                            if (user && user.lastRoomJoinedCode !== roomCode) {
+                                await client.user.update({
+                                    where: { id: userId },
+                                    data: {
+                                        totalRoomsJoined: { increment: 1 },
+                                        lastRoomJoinedCode: roomCode
+                                    }
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error updating room statistics:', error);
+                        }
+                    })();
+                }
                 //send msgs now based on the last message time 
 
                 const {messageHistory} = roomData;
