@@ -11,6 +11,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { useParams, useNavigate } from 'react-router-dom'
 import LoadingOverlay from "../components/LoadingOverlay"
 import ShareLinkModal from "../components/ShareLinkModal"
+import FileInput from "../components/FileInput"
+import FileMessage from "../components/FileMessage"
+import { completeFileUpload } from "../services/fileUploadService"
+import { useAuth } from "../hooks/useAuth"
 
 interface StoredSession{
   roomCode: string ,
@@ -19,15 +23,33 @@ interface StoredSession{
   timestamp : number
 }
 
+interface ChatMessage {
+  user: string;
+  msg?: string;
+  hours: number;
+  minutes: number;
+  isSelf: boolean;
+  status?: 'sending' | 'sent';
+  timestamp: number;
+  fileId?: string | number;
+  s3Key?: string;
+  s3Url?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+}
+
 const Room = () => {
+  const { currentUser, isAuthenticated } = useAuth();
   const { roomCode: paramRoomCode } = useParams<{ roomCode?: string }>();
-  const [msgs,setMsgs] = useState<{user:string,msg:string,hours:number,minutes:number,isSelf:boolean,status?:'sending'|'sent',timestamp:number}[]>([])
+  const [msgs, setMsgs] = useState<ChatMessage[]>([])
   const msgRef = useRef<HTMLInputElement | null>(null);
   const ws = useRef<WebSocket|null>(null);
   const msgsEndRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const nicknameRef = useRef('');
   const roomCodeRef = useRef('');
+  const [isFileUploading, setIsFileUploading] = useState(false);
   const [sessionId] = useState(() => {
     const stored = localStorage.getItem('chatSession');
       if (stored) {
@@ -50,6 +72,8 @@ const Room = () => {
   const typingTimeouts = useRef<Map<string,ReturnType<typeof setTimeout>>>(new Map());
   const [isConnecting, setIsConnecting] = useState(true);
   const [isFirstRender, setIsFirstRender] = useState(true);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounter = useRef(0);
   const navigate = useNavigate();
 
   function saveSession() {
@@ -222,7 +246,9 @@ const Room = () => {
                 roomCode: data.roomCode,
                 username: data.nickname,
                 sessionId: sessionId,
-                lastMessageTime: lastMessageTime()
+                lastMessageTime: lastMessageTime(),
+                userId: isAuthenticated && currentUser ? currentUser.id : undefined,
+                isAuthenticated: isAuthenticated
               }
             }))
             
@@ -264,12 +290,20 @@ const Room = () => {
                     const date = new Date(m.time);
                     return {
                         user: m.user,
-                        msg: m.msg,
+                        ...(m.msg && { msg: m.msg }),
                         hours: date.getHours(),
                         minutes: date.getMinutes(),
                         isSelf: m.sessionId === sessionId,
                         status: m.sessionId === sessionId ? ('sent' as const) : undefined,
-                        timestamp: m.time
+                        timestamp: m.time,
+                        ...(m.fileId && { 
+                            fileId: m.fileId,
+                            s3Key: m.s3Key,
+                            s3Url: m.s3Url,
+                            fileName: m.fileName,
+                            fileType: m.fileType,
+                            fileSize: m.fileSize
+                        })
                     };
                 });
                 setMsgs((prev) => [...prev, ...transformedMsgs]);
@@ -292,14 +326,20 @@ const Room = () => {
                 setAlertType('info');
             }
             else if(data.type == 'message'){
-                const {time,msg,user,sessionId:msgSessionId} = data.payload;
+                const {time, msg, user, sessionId:msgSessionId, fileId, s3Key, s3Url, fileName, fileType, fileSize} = data.payload;
 
                 //store the message recieved on local storage as well
                 const backendMsg = {
                     msg,
                     user,
                     time,
-                    sessionId: msgSessionId
+                    sessionId: msgSessionId,
+                    fileId,
+                    s3Key,
+                    s3Url,
+                    fileName,
+                    fileType,
+                    fileSize
                 };
                 const currentMsgs = getLocalMsgs();
                 const updatedMsgs = [...currentMsgs, backendMsg];
@@ -315,24 +355,51 @@ const Room = () => {
                 if (isSelf) {
                   // Update existing 'sending' message to 'sent'
                   setMsgs((prevMsgs) => {
-                    const foundIndex = prevMsgs.findIndex(
-                      (m) => m.isSelf && m.msg === msg && m.status === 'sending' && (time - m.timestamp < 10000)
-                    );
-                    if (foundIndex !== -1) {
-                      const updated = [...prevMsgs];
-                      updated[foundIndex] = {
-                        ...updated[foundIndex],
-                        status: 'sent' as const,
-                        timestamp: time
-                      };
-                      return updated;
+                    // For file messages, match by fileId
+                    if (fileId) {
+                      const foundIndex = prevMsgs.findIndex(
+                        (m) => m.isSelf && m.fileId === fileId && m.status === 'sending' && (time - m.timestamp < 10000)
+                      );
+                      if (foundIndex !== -1) {
+                        const updated = [...prevMsgs];
+                        updated[foundIndex] = {
+                          ...updated[foundIndex],
+                          status: 'sent' as const,
+                          timestamp: time
+                        };
+                        return updated;
+                      }
+                    } else if (msg) {
+                      // For text messages, match by content
+                      const foundIndex = prevMsgs.findIndex(
+                        (m) => m.isSelf && m.msg === msg && m.status === 'sending' && (time - m.timestamp < 10000)
+                      );
+                      if (foundIndex !== -1) {
+                        const updated = [...prevMsgs];
+                        updated[foundIndex] = {
+                          ...updated[foundIndex],
+                          status: 'sent' as const,
+                          timestamp: time
+                        };
+                        return updated;
+                      }
+                      // Fallback: add as sent if optimistic not found
+                      return [...prevMsgs, {user, msg, hours, minutes, isSelf, status:'sent' as const, timestamp:time}];
                     }
-                    // Fallback: add as sent if optimistic not found
-                    return [...prevMsgs, {user,msg,hours,minutes,isSelf,status:'sent' as const,timestamp:time}];
+                    return prevMsgs;
                   });
                 } else {
                   // Other user's message
-                  setMsgs((m)=>[...m,{user,msg,hours,minutes,isSelf,timestamp:time}]);
+                  const newMsg: ChatMessage = {
+                    user,
+                    ...(msg && { msg }),
+                    hours,
+                    minutes,
+                    isSelf,
+                    timestamp: time,
+                    ...(fileId && { fileId, s3Key, s3Url, fileName, fileType, fileSize })
+                  };
+                  setMsgs((m) => [...m, newMsg]);
                 }
                 
                 // Remove typing indicator when user sends a message
@@ -472,6 +539,79 @@ const Room = () => {
     }
   }
 
+  async function handleFileSelect(files: File[]) {
+    try {
+      setIsFileUploading(true);
+
+      for (const file of files) {
+        // Create optimistic message immediately with status='sending'
+        const now = Date.now();
+        const date = new Date(now);
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+
+        const optimisticFileMsg: ChatMessage = {
+          user: nicknameRef.current,
+          hours,
+          minutes,
+          isSelf: true,
+          status: 'sending',
+          timestamp: now,
+          fileId: `temp-${now}`,
+          s3Key: `temp-${now}`,
+          s3Url: '',
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        };
+        
+        // Add to chat immediately so user sees it
+        setMsgs((prev) => [...prev, optimisticFileMsg]);
+
+        // Upload file
+        const fileMetadata = await completeFileUpload(file, roomCodeRef.current);
+
+        // Update message with real metadata
+        setMsgs((prev) =>
+          prev.map((m) =>
+            m.timestamp === now
+              ? {
+                  ...m,
+                  status: 'sent',
+                  fileId: fileMetadata.fileId,
+                  s3Key: fileMetadata.s3Key,
+                  s3Url: fileMetadata.s3Url,
+                }
+              : m
+          )
+        );
+
+        // Send to server
+        ws.current?.send(JSON.stringify({
+          type: 'message',
+          payload: {
+            msg: '',
+            fileId: fileMetadata.fileId,
+            s3Key: fileMetadata.s3Key,
+            s3Url: fileMetadata.s3Url,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            sessionId: sessionId
+          }
+        }));
+      }
+
+      setIsFileUploading(false);
+    } catch (error) {
+      console.error('❌ File upload failed:', error);
+      setShowAlert(true);
+      setAlertMessage(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAlertType('error');
+      setIsFileUploading(false);
+    }
+  }
+
   function leaveRoom() {
     ws.current?.close();
     localStorage.removeItem('roomMessages');
@@ -494,6 +634,41 @@ const Room = () => {
     } else {
       // No share API, show modal
       setShowShareModal(true);
+    }
+  }
+
+  function handleDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDraggingOver(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingOver(false);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDraggingOver(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileSelect(Array.from(files));
     }
   }
 
@@ -591,42 +766,87 @@ const Room = () => {
               />
             </div>
             <div 
-            className="flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3"
+            className={`flex flex-col w-full h-[55dvh] sm:h-[60dvh] p-3 sm:p-6 md:p-8 rounded-2xl border border-solid border-neutral-700 overflow-y-auto gap-3 transition-colors relative ${
+              isDraggingOver ? 'bg-neutral-800/50 border-[#beb59b]' : ''
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           >
-              {msgs.map((m,i)=>(
-                  <Message key={i} msg={m.msg} hours={m.hours} minutes={m.minutes} user={m.user} isSelf={m.isSelf} status={m.status}></Message>
+              {msgs.map((m, i) => (
+                m.s3Key && m.fileName ? (
+                  <FileMessage
+                    key={i}
+                    fileName={m.fileName}
+                    fileSize={m.fileSize || 0}
+                    fileType={m.fileType || 'file'}
+                    s3Key={m.s3Key}
+                    s3Url={m.s3Url}
+                    isSelf={m.isSelf}
+                    timestamp={m.timestamp}
+                    status={m.status as 'sending' | 'sent' | 'failed' | undefined}
+                  />
+                ) : (
+                  <Message 
+                    key={i} 
+                    msg={m.msg || ''} 
+                    hours={m.hours} 
+                    minutes={m.minutes} 
+                    user={m.user} 
+                    isSelf={m.isSelf} 
+                    status={m.status}
+                  />
+                )
               ))}
               {Array.from(typingUsers.values()).map((typingUser) => (
                   <TypingBubble key={typingUser.user} user={typingUser.user} isRemoving={removingTypingUsers.has(typingUser.user)} />
               ))}
               <div ref={msgsEndRef}></div>
+              
+              {isDraggingOver && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl backdrop-blur-sm pointer-events-none">
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">📁</div>
+                    <p className="text-white font-semibold">Drop files here to upload</p>
+                  </div>
+                </div>
+              )}
           </div>
-            <div className="flex flex-row mt-4 w-full gap-2 md:gap-2">
-              <Input 
-                width="w-5/6" 
-                ref={msgRef} 
-                placeholder="Type a message"
-                onInput={handleTyping}
-                disabled={isConnecting}
-                inputMode="text"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                onBlur={() => {
-                  // Prevent blur on mobile after sending message
-                  setTimeout(() => {
-                    if (document.activeElement !== msgRef.current) {
-                      msgRef.current?.focus();
+            <div className="flex flex-row mt-4 w-full gap-1 md:gap-2 items-center">
+              <div className="flex-1 border border-solid border-[#444444] rounded-xl flex items-center">
+                <FileInput
+                  onFileSelect={handleFileSelect}
+                  isLoading={isFileUploading}
+                  merged={true}
+                />
+                <Input 
+                  width="flex-1" 
+                  ref={msgRef} 
+                  placeholder="Type a message"
+                  onInput={handleTyping}
+                  disabled={isConnecting || isFileUploading}
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  merged={true}
+                  onBlur={() => {
+                    // Prevent blur on mobile after sending message
+                    setTimeout(() => {
+                      if (document.activeElement !== msgRef.current) {
+                        msgRef.current?.focus();
+                      }
+                    }, 10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
                     }
-                  }, 10);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-              ></Input>
+                  }}
+                ></Input>
+              </div>
               <span className="hidden md:block w-1/6">
               <Button width="w-full" onClick={sendMessage} text={"Send"} ></Button></span>
               <span className="block md:hidden w-1/6">

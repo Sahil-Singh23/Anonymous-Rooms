@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import { client } from "../prisma.js";
 import type {Request,Response,NextFunction} from "express"
+import { getProfilePicUrl } from "../routes/profile.js";
+
 interface JwtPayload {
   userId: number;
 }
@@ -23,7 +25,8 @@ export default async function requireAuth(req:Request, res: Response, next: Next
             select: {
                 id: true,
                 email: true,
-                name: true
+                name: true,
+                profilePicKey: true,
             }
         });
 
@@ -31,7 +34,19 @@ export default async function requireAuth(req:Request, res: Response, next: Next
             return res.status(401).json({ message: "User no longer exists" });
         }
 
-        req.user = user;
+        // Generate presigned GET URL for profile picture if it exists
+        let profilePicUrl: string | undefined;
+        if (user.profilePicKey) {
+            profilePicUrl = await getProfilePicUrl(user.id, user.profilePicKey);
+        }
+
+        // Attach user to request object with profile pic URL
+        req.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            ...(profilePicUrl && { profilePicUrl })
+        };
 
         next();
     } catch (e) {

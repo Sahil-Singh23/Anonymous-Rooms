@@ -7,6 +7,7 @@ import Input from "../components/Input"
 import ChatIcon from "../icons/ChatIcon"
 import Glow from "../components/Glow"
 import Alert from "../components/Alert"
+import Navbar from "../components/Navbar"
 import JoinSharedRoomModal from "../components/JoinSharedRoomModal"
 
 const Landing = () => {
@@ -97,6 +98,7 @@ const Landing = () => {
         />
       )}
       <Glow></Glow>
+      <Navbar />
       <section className="fixed top-6 right-6 md:right-25 z-50">
         <a
           href="https://github.com/Sahil-Singh23/Chat_App_Websockets"
