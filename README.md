@@ -1,221 +1,124 @@
-# 💬 Anonymous Rooms v2 - Real-time Chat Application
+# Anonymous Rooms v3 - Authenticated Real-time Chat with File Sharing
 
-A production-ready anonymous chat application featuring real-time messaging, typing indicators, persistent message history, and multi-device support. Built with WebSockets for instant communication.
+A production-grade anonymous chat application with JWT authentication, secure file uploads, user profiles, and persistent data storage. Real-time messaging via WebSockets with PostgreSQL backend.
 
 ![Demo Landing](./ChatAppFE/public/img1new.png)
 ![Demo Chat Room](./ChatAppFE/public/img2.png)
-![Demo Typing](./ChatAppFE/public/img3.png)
+![Demo File Sharing](./ChatAppFE/public/img5.png)
 
-<div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-  <img src="./ChatAppFE/public/img4.png" alt="Demo Mobile" width="300" />
-  <img src="./ChatAppFE/public/img5.png" alt="Demo Share" width="300" />
-</div>
+## Features
 
-## ✨ Features
+**Core Chat**
+- Real-time Messaging - WebSocket-powered instant delivery
+- Live Typing Indicators - See who's typing in real-time  
+- Smart Link Sharing - Share rooms with dynamic routing
+- Live User Count - Real-time presence tracking
+- Mobile-First - Fully responsive design
 
-- **Real-time Messaging** - Instant message delivery using WebSockets
-- **Live Typing Indicators** - See who's typing in real-time with animated indicators
-- **Message Persistence** - Last 100 messages cached in localStorage (survives page refresh)
-- **Mobile-First Design** - Fully responsive on phones, tablets, and desktop
-- **Smart Link Sharing** - Share room links that work across devices with dynamic routing
-- **Session Management** - Per-tab session isolation prevents multi-tab conflicts
-- **Room Lifecycle Management** - Rooms stay alive for 5+ minutes even with 0 users (grace period for link sharing)
-- **Live User Count** - Real-time user presence tracking
-- **Smooth Animations** - Polished UI with fade transitions and scroll animations
-- **Anonymous** - No sign-up required, completely private
-- **Auto-cleanup** - Rooms auto-delete after 5 minutes of inactivity
+**Authentication & Users**
+- JWT Authentication - Secure session management
+- Passport OAuth - Google login integration
+- User Profiles - Customizable profile pictures and bios
+- Rate Limiting - Protection against abuse
 
-## 🏗️ Architecture
+**File Management**
+- File Sharing - Upload files directly in chat
+- AWS S3 Storage - Secure cloud storage with presigned URLs
+- Drag & Drop - Easy file upload interface
+- Auto-Cleanup - Automatic deletion of old files
 
-### Project Structure
+**Data Persistence**
+- PostgreSQL Database - Persistent message & user data
+- Prisma ORM - Type-safe database access
+- Message History - Full conversation history saved
+- Sync Across Devices - Access history from any device
+
+## 🏗️ Tech Stack
+
+**Frontend:** React 19 | TypeScript | Tailwind CSS | Vite | WebSocket API
+
+**Backend:** Node.js | Express | WebSocket (ws) | JWT | Passport
+
+**Database:** PostgreSQL | Prisma ORM
+
+**Cloud:** AWS S3 | DigitalOcean (DO App Platform)
+
+**Infrastructure:** HTTPS/WSS | Docker-ready | Environment-based config
+
+## 📦 Project Structure
 
 ```
 Chat_app_websockets/
-├── ChatAppBE/              # Backend (Node.js + Express + WebSocket)
+├── ChatAppBE/                 # Backend
 │   ├── src/
-│   │   ├── index.ts       # WebSocket server, room management, cleanup job
-│   │   └── utils.ts       # Helper functions
+│   │   ├── index.ts          # Server & WebSocket setup
+│   │   ├── prisma.ts         # Database client
+│   │   ├── routes/           # API endpoints
+│   │   ├── middlewares/       # Auth, rate limiting
+│   │   ├── jobs/             # Cleanup tasks
+│   │   └── utils/            # S3, validators, etc
+│   ├── prisma/
+│   │   ├── schema.prisma     # Database schema
+│   │   └── migrations/       # DB migrations
 │   └── package.json
-└── ChatAppFE/              # Frontend (React + TypeScript + Vite)
+│
+└── ChatAppFE/                 # Frontend
     ├── src/
-    │   ├── pages/
-    │   │   ├── Landing.tsx # Create/join rooms
-    │   │   └── Room.tsx    # Chat interface, typing indicators, message handling
-    │   ├── components/
-    │   │   ├── Message.tsx
-    │   │   ├── TypingBubble.tsx # Animated typing indicator
-    │   │   ├── Alert.tsx
-    │   │   └── ...
-    │   └── main.tsx
+    │   ├── pages/            # Room, Auth, Profile
+    │   ├── components/       # Reusable UI components
+    │   ├── services/         # API client, auth service
+    │   ├── contexts/         # Auth context
+    │   └── hooks/            # Custom React hooks
     └── package.json
 ```
 
-### Tech Stack
+## 🔐 Architecture Highlights
 
-**Frontend:**
--  React 18 with TypeScript
--  Vite (instant HMR, optimized builds)
--  Tailwind CSS v4
--  React Router (dynamic routes)
--  Native WebSocket API
--  Custom hooks (useThrottle, useDebounce)
-
-**Backend:**
--  Node.js + Express
--  WebSocket server (ws library)
--  TypeScript for type safety
--  In-memory room storage with automatic cleanup
-
-### Data Flow Architecture
-
+**Authentication Flow**
 ```
-Frontend (React)                 Backend (Node.js)
-├── Room.tsx                     ├── WebSocket Server
-│   ├── msgs[] state             │   ├── rooms Map
-│   ├── typingUsers Map          │   ├── clients Map
-│   └── WebSocket ref            │   └── Cleanup Job (1min)
-│                                │
-├── Storage:                     └── Auto-deletes empty
-│   ├── sessionStorage (per-tab) rooms after 5 mins
-│   └── localStorage (100 msgs)
+Login → Google OAuth (Passport) → JWT Token → Secure API Access
 ```
 
-### Design Decisions
-
-#### 1. **Hybrid Storage Strategy**
-- **sessionStorage** for session data:
-  - Automatically cleared when tab closes
-  - Isolated per-tab (prevents multi-tab conflicts)
-  - Contains: roomCode, nickname, sessionId, timestamp
-  
-- **localStorage** for message history:
-  - Survives page refresh and reconnects
-  - Capped at 100 messages (memory efficient)
-  - Delta sync: Only fetch messages newer than last stored
-
-**Why?** Balances persistence with privacy and prevents users from accidentally joining old rooms.
-
-#### 2. **Session ID System**
-Instead of username-based identification:
-- Each browser instance gets a unique UUID stored in localStorage
-- Persists across sessions
-- Allows reconnection detection within 60-second grace period
-- No authentication overhead
-
-**Why?** Maintains anonymity while enabling reconnection and message alignment.
-
-#### 3. **5-Minute Room Grace Period**
-Rooms don't delete immediately when empty:
-- Set `emptyingSince` timestamp when last user leaves
-- Cleanup job (runs every 1 min) checks: `now - emptyingSince > 5 mins`
-- If user rejoins within 5 mins, timestamp resets
-
-**Why?** Users sharing links via text/voice have time to open them without room vanishing.
-
-#### 4. **Typing Indicators with Throttling**
-- Client throttles typing events to 500ms intervals
-- Server broadcasts to all room members except sender
-- Auto-clears after 3 seconds of inactivity (prevents stale indicators)
-- Max 3 typing users displayed (sorted by recency)
-- Smooth fade-out animation (300ms) before removal
-
-**Why?** Reduces server load while maintaining responsive UX.
-
-#### 5. **Dynamic URL Routing**
-Changed from query parameters to dynamic routes:
-- Old: `/room?roomCode=ABC123`
-- New: `/room/ABC123` (cleaner, better for sharing)
-
-**Why?** More intuitive for users, easier to remember, better for link previews.
-
-#### 6. **Message History Transformation**
-Backend stores minimal format:
-```json
-{ msg, user, time, sessionId }
+**File Upload Pipeline**
+```
+User Selects File 
+  ↓
+Get Presigned S3 URL from Backend
+  ↓
+Upload directly to AWS S3
+  ↓
+Backend updates Database with File Metadata
+  ↓
+WebSocket broadcasts to Room
+  ↓
+Frontend displays File Message with Download Link
 ```
 
-Frontend transforms for UI display:
-```json
-{ user, msg, hours, minutes, isSelf }
-```
+**Data Persistence**
+- Messages stored in PostgreSQL with full history
+- User profiles with authentication status
+- File references with S3 URLs
+- Automatic cleanup of orphaned files
 
-**Why?** Separates storage concerns from presentation logic.
-
-## 📱 Mobile Support
-
-✅ **Fully Responsive Design**
-- Touch-friendly buttons and inputs
-- Auto-scrolling on new messages
-- Optimized for 320px (iPhone SE) to 2560px+ (desktop)
-- Safe area padding for notch/home indicator
-
-✅ **Mobile-Specific UX**
-- Simplified button layout (icon-only send button)
-- Larger tap targets (44px minimum)
-- Keyboard-aware scrolling
-- Native share API fallback to modal
-
-✅ **Performance**
-- Lazy-loaded components
-- Optimized re-renders (React.memo on Message)
-- Efficient state updates (Map for typing users)
-
-## 🔮 Upcoming Features
-
-### Image & File Sharing (Q1 2026)
-- **Upload pipeline** using Cloudinary or AWS S3
-- **Image preview** before sending
-- **Client-side compression** to reduce bandwidth
-- **Inline image display** in chat with lightbox
-- **File type validation** (images only initially)
-
-Implementation approach:
-```
-User selects file
-  ↓
-Client compresses/resizes (sharp.js)
-  ↓
-Upload to Cloudinary/S3 (multipart form)
-  ↓
-Get secure CDN URL
-  ↓
-Send via WebSocket with message
-  ↓
-Server broadcasts URL to room
-  ↓
-Frontend renders <img> inline
-```
-
-This will maintain the anonymous philosophy while adding rich media support.
-
-## 📡 WebSocket Architecture
-
-Messages use a simple JSON protocol with `type` and `payload`:
-- **join** - Client joins a room
-- **joined** - Server confirms join + sends message history
-- **message** - Real-time message exchange
-- **typing** - Typing indicator broadcast
-- **user-joined/left** - Presence notifications
-- **error** - Error messages
-
-See [backend code](./ChatAppBE/src/index.ts) for full protocol details.
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+
-- npm or yarn
+- PostgreSQL database
+- AWS S3 bucket
+- Google OAuth credentials (optional)
 
 ### Local Development
 
-**1. Clone & Install**
 ```bash
-git clone <repo-url>
+# Clone & setup
+git clone <repo>
 cd Chat_app_websockets
 
 # Backend
 cd ChatAppBE
 npm install
+# Create .env.development with DB_URL, AWS credentials, etc.
 npm run dev
 
 # Frontend (new terminal)
@@ -224,22 +127,19 @@ npm install
 npm run dev
 ```
 
-**2. Open Browser**
-- Frontend: `http://localhost:5173`
-- Backend: `ws://localhost:8000`
-
-**3. Test Real-Time Chat**
-- Create room in one window
-- Open another browser/incognito
-- Share room code
-- Chat in real-time!
+Open `http://localhost:5173`
 
 ### Environment Variables
 
-**Backend (.env)**
+**Backend (.env.development)**
 ```env
-PORT=8000
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:2005
+PORT=8080
+JWT_SECRET=your-secret-key
+DATABASE_URL=postgresql://user:pass@localhost/chat_db
+AWS_S3_BUCKET_NAME=your-bucket
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
 ```
 
 **Frontend (.env)**
@@ -248,44 +148,50 @@ VITE_API_URL=http://localhost:8000
 VITE_WS_URL=ws://localhost:8000
 ```
 
-## 📦 Deployment
+## 📡 API Endpoints
 
-### Backend (Digital Ocean Droplet)
-> **Currently hosted on Digital Ocean VPS for production reliability**
-```bash
-# Backend is deployed on a Digital Ocean droplet
-# Running on Ubuntu 22.04 LTS with PM2 process manager
-# HTTPS/WSS enabled with SSL certificate
-# Automatic deployments via GitHub webhooks
-```
+**Authentication**
+- `POST /auth/register` - Create account
+- `POST /auth/login` - Login with email/password
+- `GET /auth/login/federated/google` - Google OAuth
+- `POST /auth/logout` - Logout
 
-### Frontend (Vercel)
-```bash
-# Vercel → Import from GitHub
-# Set root directory: ChatAppFE
-# Environment variables:
-#   VITE_API_URL = https://your-railway.up.railway.app
-#   VITE_WS_URL = wss://your-railway.up.railway.app
-# Deploy!
-```
+**User Profile**
+- `GET /api/user/profile` - Get current user
+- `PUT /api/user/profile` - Update profile
+- `POST /api/user/profile-picture/upload` - Upload avatar
 
-## 📊 Performance Metrics
+**Files**
+- `POST /api/files/presigned-url` - Get S3 upload URL
+- `GET /api/files/:fileId` - Download file metadata
 
-- **WebSocket Latency**: <50ms (local), ~200ms (production)
-- **Message Delivery**: <100ms across room
-- **Typing Indicator Latency**: ~50ms throttled updates
-- **Memory per Room**: ~50KB (100 messages + metadata)
+**Chat**
+- WebSocket: `wss://api.domain.com` - Real-time messaging
+
+## 📊 Key Improvements from V2
+
+| Feature | V2 | V3 |
+|---------|----|----|
+| Authentication | None | JWT + OAuth |
+| File Sharing | Planned | Yes |
+| Data Storage | localStorage | PostgreSQL |
+| User Profiles | No | Yes |
+| Message History | 100 (local) | Unlimited |
+| Multi-device Sync | No | Yes |
+| Rate Limiting | No | Yes |
+
+## 🌐 Deployment
+
+**Frontend:** https://rooms.sahils.tech (Vercel)
+
+**Backend:** https://anonymous-api.sahils.tech (DigitalOcean)
 
 ## 📄 License
 
 MIT License - Open source and free to use!
 
-## 🤝 Contributing
-
-Contributions welcome! Please open issues or PRs for bugs/features.
-
 ---
 
-**v2.0 Release | January 2026**
+**v3.0 Release | April 2026**
 
-Learn more: [WebSocket API Docs](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) | [React Hooks](https://react.dev/reference/react)
+[Archive: v2.0](./V2_README.md) | [Archive: v1.0](./V1_README.md)
