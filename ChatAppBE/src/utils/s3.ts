@@ -31,6 +31,7 @@ async function configureCORS(): Promise<void> {
             AllowedHeaders: ["*"],
             AllowedMethods: ["GET", "PUT", "POST", "DELETE", "HEAD"],
             AllowedOrigins: [
+              process.env.FRONTEND_URL||"",
               "http://localhost:2005",
               "http://localhost:5173",
               "http://localhost:3000",
