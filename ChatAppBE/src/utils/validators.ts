@@ -1,6 +1,6 @@
 /**
  * Validates username format
- * - 3-50 characters
+ * - 1-50 characters
  * - Alphanumeric, underscore, dash, space only
  */
 export function validateUsername(username: string): { valid: boolean; error?: string } {
@@ -10,8 +10,8 @@ export function validateUsername(username: string): { valid: boolean; error?: st
 
   const trimmed = username.trim();
   
-  if (trimmed.length < 3) {
-    return { valid: false, error: "Username must be at least 3 characters" };
+  if (trimmed.length < 1) {
+    return { valid: false, error: "Username cannot be empty" };
   }
 
   if (trimmed.length > 50) {

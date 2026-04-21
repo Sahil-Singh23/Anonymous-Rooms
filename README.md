@@ -2,9 +2,12 @@
 
 A production-grade anonymous chat application with JWT authentication, secure file uploads, user profiles, and persistent data storage. Real-time messaging via WebSockets with PostgreSQL backend.
 
-![Demo Landing](./ChatAppFE/public/img1new.png)
-![Demo Chat Room](./ChatAppFE/public/img2.png)
-![Demo File Sharing](./ChatAppFE/public/img5.png)
+![Demo Landing](./ChatAppFE/public/img_1.png)
+![Demo Chat Room](./ChatAppFE/public/img_2.png)
+
+<div style="display: flex; gap: 20px; justify-content: center;">
+  <img src="./ChatAppFE/public/img_3.jpeg" alt="Demo Mobile" width="280" />
+</div>
 
 ## Features
 
